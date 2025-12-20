@@ -1,0 +1,66 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tokuye"
+version = "0.1.0"
+description = "AI-powered development assistant agent that works alongside you like a friend"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [
+    { name = "ken11", email = "kent.adachi@adachi-honten.net" }
+]
+requires-python = ">=3.10"
+keywords = ["ai", "agent", "development", "assistant", "bedrock", "claude"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "strands-agents==1.19.0",
+    "strands-agents-tools==0.2.17",
+    "boto3==1.42.9",
+    "prompt_toolkit==3.0.52",
+    "pathspec==0.12.1",
+    "typer==0.20.0",
+    "pytest==9.0.2",
+    "GitPython==3.1.45",
+    "chardet==5.2.0",
+    "faiss-cpu==1.13.1",
+    "pyyaml==6.0.3",
+    "textual==6.9.0",
+    "tree_sitter==0.25.2",
+    "tree-sitter-language-pack==0.13.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0.2",
+    "ruff>=0.1.0",
+]
+
+[project.scripts]
+tokuye = "tokuye.main:cli"
+
+[project.urls]
+Homepage = "https://github.com/ken11/tokuye"
+Repository = "https://github.com/ken11/tokuye"
+Issues = "https://github.com/ken11/tokuye/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tokuye"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/README.md",
+]
