@@ -1,3 +1,10 @@
+"""
+Repository summarization tool that generates structured summaries of codebases.
+
+Inspired by Repomix's repository packing functionality:
+https://github.com/yamadashy/repomix (MIT License)
+"""
+
 import datetime
 import logging
 import re

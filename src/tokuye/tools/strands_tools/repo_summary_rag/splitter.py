@@ -1,3 +1,10 @@
+"""
+Recursive text splitter with offset and line number tracking for code chunking.
+
+Based on langchain's text-splitters (RecursiveCharacterTextSplitter):
+https://github.com/langchain-ai/langchain (MIT License)
+"""
+
 from __future__ import annotations
 
 import re

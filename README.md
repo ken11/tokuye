@@ -317,10 +317,35 @@ MIT License - see LICENSE file for details
 
 ## Acknowledgments
 
-- [Repomix](https://repomix.com/) - Inspiration for repository summarization
-- [Strands Agents](https://strandsagents.com/latest/) - AWS AI Agent Framework
-- [LangChain](https://www.langchain.com/) - Reference for tree-sitter implementation
-- [Textual](https://textual.textualize.io/) - Beautiful TUI framework
+Tokuye builds upon the excellent work of several open-source projects:
+
+### Core Dependencies
+
+- **[Strands Agents](https://strandsagents.com/latest/)** - AWS AI Agent Framework that powers Tokuye's agent architecture
+- **[Textual](https://textual.textualize.io/)** - Beautiful TUI framework for the interactive terminal interface
+
+### Code Attribution
+
+Portions of Tokuye's code are derived from or inspired by the following MIT-licensed projects:
+
+- **[langchain-community](https://github.com/langchain-ai/langchain-community)** (MIT License, LangChain)
+  - File management toolkit (`file_management.py`)
+  - Code segmentation and tree-sitter-based parsing (`repo_summary_rag/languages/`)
+  - See [NOTICE.md](src/tokuye/tools/strands_tools/NOTICE.md) for detailed attribution
+
+- **[langchain](https://github.com/langchain-ai/langchain)** (MIT License, LangChain)
+  - Recursive text splitter with offset tracking (`repo_summary_rag/splitter.py`)
+  - Based on `libs/text-splitters/langchain_text_splitters/character.py`
+  - See [NOTICE.md](src/tokuye/tools/strands_tools/NOTICE.md) for detailed attribution
+
+- **[Repomix](https://github.com/yamadashy/repomix)** (MIT License)
+  - Repository summarization approach (`repo_summary.py`)
+  - Inspiration for Claude-friendly XML output format
+  - See [NOTICE.md](src/tokuye/tools/strands_tools/NOTICE.md) for detailed attribution
+
+All derived code has been modified and adapted for Tokuye's architecture and requirements. We are grateful to the maintainers and contributors of these projects for making their work available under permissive licenses.
+
+For complete license texts and detailed attribution, see [src/tokuye/tools/strands_tools/NOTICE.md](src/tokuye/tools/strands_tools/NOTICE.md).
 
 ---
 
