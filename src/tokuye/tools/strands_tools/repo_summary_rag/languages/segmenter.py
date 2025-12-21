@@ -2,7 +2,7 @@
 Code segmentation base classes for extracting functions and classes from source code.
 
 Based on langchain-community's language parsers:
-https://github.com/langchain-ai/langchain (MIT License)
+https://github.com/langchain-ai/langchain-community (MIT License)
 """
 
 from __future__ import annotations

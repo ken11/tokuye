@@ -1,3 +1,10 @@
+"""
+Go code segmentation using tree-sitter.
+
+Based on langchain-community's language parsers:
+https://github.com/langchain-ai/langchain-community (MIT License)
+"""
+
 from tokuye.tools.strands_tools.repo_summary_rag.languages.segmenter import \
     TreeSitterSegmenter
 
