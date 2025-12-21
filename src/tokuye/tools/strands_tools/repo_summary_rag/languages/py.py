@@ -1,3 +1,10 @@
+"""
+Python code segmentation using AST.
+
+Based on langchain-community's language parsers:
+https://github.com/langchain-ai/langchain-community (MIT License)
+"""
+
 import ast
 from typing import List
 

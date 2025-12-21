@@ -1,9 +1,15 @@
+"""
+Code segmentation base classes for extracting functions and classes from source code.
+
+Based on langchain-community's language parsers:
+https://github.com/langchain-ai/langchain-community (MIT License)
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import List, Tuple
 
-# tree-sitter & tree_sitter_languages は動的に使用
 try:
     from tree_sitter import Parser  # type: ignore
     from tree_sitter_languages import get_language  # type: ignore

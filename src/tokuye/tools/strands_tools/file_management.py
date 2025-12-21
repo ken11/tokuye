@@ -1,3 +1,10 @@
+"""
+File management tools for safe file operations within a sandboxed directory.
+
+Based on langchain-community's FileManagementToolkit:
+https://github.com/langchain-ai/langchain (MIT License)
+"""
+
 import os
 import shutil
 from pathlib import Path
