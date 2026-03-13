@@ -45,14 +45,12 @@ def main(
     settings.language = language
     load_yaml_config(settings)
 
-    if "claude-sonnet-4-5-" in settings.bedrock_model_id:
-        settings.model_identifier = "sonnet-4-5"
-    if "claude-sonnet-4-20250514" in settings.bedrock_model_id:
-        settings.model_identifier = "sonnet-4"
+    if "claude-sonnet-4-6" in settings.bedrock_model_id:
+        settings.model_identifier = "sonnet-4-6"
     if "claude-haiku-4-5-" in settings.bedrock_model_id:
         settings.model_identifier = "haiku-4-5"
-    if "claude-opus-4-5-" in settings.bedrock_model_id:
-        settings.model_identifier = "opus-4-5"
+    if "claude-opus-4-6-" in settings.bedrock_model_id:
+        settings.model_identifier = "opus-4-6"
 
     validate_settings()
     token_tracker.set_cost_table()
