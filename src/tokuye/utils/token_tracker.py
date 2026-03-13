@@ -5,13 +5,7 @@ from typing import Dict, List, Tuple
 from tokuye.utils.config import settings
 
 MODEL_COST = {
-    "sonnet-4": {
-        "input": 0.003,
-        "output": 0.015,
-        "cache_write": 0.00375,
-        "cache_read": 0.0003,
-    },
-    "sonnet-4-5": {
+    "sonnet-4-6": {
         "input": 0.003,
         "output": 0.015,
         "cache_write": 0.00375,
@@ -23,7 +17,7 @@ MODEL_COST = {
         "cache_write": 0.00125,
         "cache_read": 0.0001,
     },
-    "opus-4-5": {
+    "opus-4-6": {
         "input": 0.005,
         "output": 0.025,
         "cache_write": 0.00625,

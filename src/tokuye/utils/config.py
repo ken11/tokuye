@@ -14,7 +14,7 @@ class Settings(BaseSettings):
 
     theme: Optional[str] = "tokyo-night"
 
-    bedrock_model_id: str = "global.anthropic.claude-sonnet-4-5-20250929-v1:0"
+    bedrock_model_id: str = "global.anthropic.claude-sonnet-4-6"
     model_identifier: str = ""
     bedrock_embedding_model_id: str = "amazon.titan-embed-text-v2:0"
     model_temperature: float = 0.2
@@ -85,5 +85,5 @@ def validate_settings():
     if settings.model_identifier == "":
         raise ValueError(
             "model_identifier must be specified. Supported models are: "
-            "Claude Sonnet 4 / 4.5, Claude Haiku 4.5, Claude Opus 4.5."
+            "Claude Sonnet 4.6, Claude Haiku 4.5, Claude Opus 4.6."
         )
