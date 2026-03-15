@@ -16,6 +16,8 @@ class Settings(BaseSettings):
         command: Optional[str] = None  # for stdio
         args: Optional[List[str]] = None  # for stdio
         env: Optional[Dict[str, str]] = None  # for stdio
+        allowed_tools: Optional[List[str]] = None  # allowlist of tool names
+        rejected_tools: Optional[List[str]] = None  # denylist of tool names
 
     mcp_servers: List[McpServerConfig] = []
 

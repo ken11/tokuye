@@ -274,14 +274,40 @@ mcp_servers:
 | `command` | string | stdio only | Command to execute |
 | `args` | list | No | Command arguments |
 | `env` | dict | No | Environment variables for the subprocess |
+| `allowed_tools` | list | No | Allowlist of tool names to expose (if omitted, all tools are exposed) |
+| `rejected_tools` | list | No | Denylist of tool names to hide |
 
 #### How It Works
 
 1. On startup, Tokuye reads `mcp_servers` from `config.yaml`
 2. Each configured server is connected (SSE or stdio)
-3. Tools from MCP servers are merged with built-in tools and passed to the agent
+3. If `allowed_tools` or `rejected_tools` is specified, tools are filtered before being passed to the agent
 4. If a server fails to connect, it is skipped with a warning — built-in tools remain available
 5. Connections are cleaned up on exit or conversation reset
+
+#### Tool Filtering
+
+MCP servers often expose many tools, but you may want to restrict which ones the agent can use. Use `allowed_tools` and `rejected_tools` to control this:
+
+- **`allowed_tools`**: Only these tools will be available. All others are hidden.
+- **`rejected_tools`**: These tools will be hidden. All others are available.
+- When both are specified, `allowed_tools` is applied first, then `rejected_tools` removes from the allowed set.
+
+```yaml
+mcp_servers:
+  - name: "github"
+    type: "stdio"
+    command: "npx"
+    args: ["-y", "@modelcontextprotocol/server-github"]
+    env:
+      GITHUB_PERSONAL_ACCESS_TOKEN: "your-token"
+    allowed_tools:
+      - "get_pull_request"
+      - "list_pull_requests"
+      - "get_pull_request_diff"
+    rejected_tools:
+      - "merge_pull_request"
+```
 
 #### Full Example
 
