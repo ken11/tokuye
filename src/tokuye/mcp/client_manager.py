@@ -16,6 +16,22 @@ logger = logging.getLogger(__name__)
 class MCPClientManager:
     """Manages multiple MCP client connections."""
 
+    @staticmethod
+    def _build_tool_filters(cfg: "Settings.McpServerConfig") -> dict | None:
+        """Build tool_filters dict from config allowed/rejected lists.
+
+        Returns None when no filtering is configured so that MCPClient
+        falls back to its default (all tools allowed).
+        """
+        if not cfg.allowed_tools and not cfg.rejected_tools:
+            return None
+        filters: dict = {}
+        if cfg.allowed_tools:
+            filters["allowed"] = list(cfg.allowed_tools)
+        if cfg.rejected_tools:
+            filters["rejected"] = list(cfg.rejected_tools)
+        return filters
+
     def __init__(self, configs: List[Settings.McpServerConfig]):
         self.configs = configs
         self._clients: list = []
@@ -54,7 +70,11 @@ class MCPClientManager:
                         )
                         continue
                     url = cfg.url
-                    client = MCPClient(lambda url=url: sse_client(url))
+                    tool_filters = self._build_tool_filters(cfg)
+                    client = MCPClient(
+                        lambda url=url: sse_client(url),
+                        **({"tool_filters": tool_filters} if tool_filters else {}),
+                    )
 
                 elif cfg.type == "stdio":
                     if not cfg.command:
@@ -67,8 +87,10 @@ class MCPClientManager:
                         args=cfg.args or [],
                         env=cfg.env,
                     )
+                    tool_filters = self._build_tool_filters(cfg)
                     client = MCPClient(
-                        lambda params=params: stdio_client(params)
+                        lambda params=params: stdio_client(params),
+                        **({"tool_filters": tool_filters} if tool_filters else {}),
                     )
 
                 else:
