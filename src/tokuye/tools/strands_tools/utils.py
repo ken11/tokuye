@@ -172,7 +172,7 @@ def _check_ignored_batch(root: Path, paths: List[Path]) -> Set[Path]:
         rel_paths = [str(p.relative_to(root)) for p in paths_to_check]
 
         # git check-ignore returns only the ignored paths
-        result = repo.git.check_ignore(*rel_paths, with_exceptions=False).strip()
+        result = repo.git(c="core.quotepath=false").check_ignore(*rel_paths, with_exceptions=False).strip()
         if result:
             ignored_rel_paths = set(result.splitlines())
             for p in paths_to_check:
