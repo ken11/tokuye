@@ -143,6 +143,9 @@ class ChatInterface(App):
         self.exit()
 
     def on_exit(self):
+        # Clean up MCP connections
+        if hasattr(self, 'agent') and self.agent:
+            self.agent.cleanup()
         print("\nExiting application...")
         sys.exit(0)
 
@@ -175,6 +178,9 @@ class ChatInterface(App):
                 break
 
         self.messages.clear()
+
+        # Clean up old agent's MCP connections before creating new one
+        self.agent.cleanup()
 
         if system_message:
             self.messages.append(system_message)
