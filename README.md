@@ -376,9 +376,9 @@ src/tokuye/
 ├── agent/              # AI agent core implementation
 ├── textual/            # TUI interface
 ├── tools/              # Agent tools (file ops, git, RAG)
-├── mcp/                # MCP client management
 │   └── strands_tools/
 │       └── repo_summary_rag/  # RAG search system
+├── mcp/                # MCP client management
 ├── prompts/            # System prompt management
 └── utils/              # Configuration & token tracking
 ```

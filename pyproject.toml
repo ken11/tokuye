@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "tokuye"
-version = "0.2.0"
+version = "0.3.0"
 description = "AI-powered development assistant agent that works alongside you like a friend"
 readme = "README.md"
 license = { text = "MIT" }
@@ -27,7 +27,7 @@ classifiers = [
 
 dependencies = [
     "strands-agents==1.30.0",
-    "strands-agents-tools[mcp]==0.2.17",
+    "strands-agents-tools[mcp]==0.2.22",
     # "strands-agents-tools==0.2.17",
     "boto3==1.42.9",
     "prompt_toolkit==3.0.52",
