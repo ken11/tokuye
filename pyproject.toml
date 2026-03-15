@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "tokuye"
-version = "0.3.0"
+version = "0.4.0"
 description = "AI-powered development assistant agent that works alongside you like a friend"
 readme = "README.md"
 license = { text = "MIT" }
