@@ -8,6 +8,7 @@ from strands.models import BedrockModel
 from strands.session.file_session_manager import FileSessionManager
 from strands.types.event_loop import Usage
 from tokuye.prompts.prompt_loader import load_prompt, load_prompt_if_exists
+from tokuye.mcp import MCPClientManager
 from tokuye.tools.strands_tools import all_tools
 from tokuye.utils.config import settings
 from tokuye.utils.token_tracker import token_tracker
@@ -49,9 +50,18 @@ class StrandsAgent:
         self.session_manager = FileSessionManager(
             session_id=thread_id, storage_dir=self.session_dir
         )
+
+        # Initialize MCP clients
+        self.mcp_manager = MCPClientManager(settings.mcp_servers)
+        self.mcp_manager.start()
+        mcp_tools = self.mcp_manager.get_tools()
+        if mcp_tools:
+            logger.info(f"Loaded {len(mcp_tools)} tools from MCP servers")
+        combined_tools = list(all_tools) + mcp_tools
+
         self.agent = Agent(
             model=self.model,
-            tools=all_tools,
+            tools=combined_tools,
             system_prompt=self.system_prompt,
             session_manager=self.session_manager,
             conversation_manager=SummarizingConversationManager(
@@ -61,6 +71,7 @@ class StrandsAgent:
         )
         self.max_steps = max_steps
         self.step_count = 0
+        self._cleaned_up = False
 
     async def __call__(self, *args, **kwargs):
         token_tracker.reset_turn()
@@ -88,3 +99,12 @@ class StrandsAgent:
         token_tracker.add_usage(usage)
         turn_usage_summary = token_tracker.format_usage_summary()
         self.update_token_usage(turn_usage_summary)
+
+    def cleanup(self):
+        """Clean up MCP client connections."""
+        if self._cleaned_up:
+            return
+        self._cleaned_up = True
+        if self.mcp_manager:
+            self.mcp_manager.stop()
+            logger.info("MCP clients cleaned up")

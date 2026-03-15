@@ -232,6 +232,81 @@ name: Alice  # Agent character name
 theme: tokyo-night  # Textual theme (see Textual docs for options)
 ```
 
+### MCP (Model Context Protocol) Support
+
+Tokuye supports [MCP](https://modelcontextprotocol.io/) servers as additional tool providers. You can connect to external MCP servers to extend the agent's capabilities beyond the built-in tools.
+
+Add an `mcp_servers` section to your `.tokuye/config.yaml`:
+
+```yaml
+# ... other settings ...
+
+mcp_servers:
+  # SSE (Server-Sent Events) transport
+  - name: "my-sse-server"
+    type: "sse"
+    url: "http://localhost:8000/sse"
+
+  # stdio transport
+  - name: "my-stdio-server"
+    type: "stdio"
+    command: "python"
+    args: ["path/to/mcp_server.py"]
+    env:                          # optional environment variables
+      SOME_API_KEY: "your-key"
+
+  # npx-based MCP server example
+  - name: "github-mcp"
+    type: "stdio"
+    command: "npx"
+    args: ["-y", "@modelcontextprotocol/server-github"]
+    env:
+      GITHUB_PERSONAL_ACCESS_TOKEN: "ghp_xxxx"
+```
+
+#### Configuration Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | ✅ | Display name for the server (used in logs) |
+| `type` | string | ✅ | Transport type: `"sse"` or `"stdio"` |
+| `url` | string | SSE only | URL of the SSE endpoint |
+| `command` | string | stdio only | Command to execute |
+| `args` | list | No | Command arguments |
+| `env` | dict | No | Environment variables for the subprocess |
+
+#### How It Works
+
+1. On startup, Tokuye reads `mcp_servers` from `config.yaml`
+2. Each configured server is connected (SSE or stdio)
+3. Tools from MCP servers are merged with built-in tools and passed to the agent
+4. If a server fails to connect, it is skipped with a warning — built-in tools remain available
+5. Connections are cleaned up on exit or conversation reset
+
+#### Full Example
+
+```yaml
+bedrock_model_id: global.anthropic.claude-sonnet-4-5-20250929-v1:0
+bedrock_embedding_model_id: amazon.titan-embed-text-v2:0
+model_temperature: 0.2
+pr_branch_prefix: tokuye/
+strands_session_dir: sessions
+name: Alice
+theme: tokyo-night
+
+mcp_servers:
+  - name: "filesystem"
+    type: "stdio"
+    command: "npx"
+    args: ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/allowed/dir"]
+
+  - name: "my-custom-server"
+    type: "sse"
+    url: "http://localhost:3000/sse"
+```
+
+> **Note**: MCP support requires the `strands-agents-tools[mcp]` extra, which is included by default. If you encounter import errors, ensure the `mcp` package is installed: `pip install 'mcp>=1.23.0,<2.0.0'`
+
 ## Advanced Usage
 
 ### Basic Commands
@@ -288,7 +363,7 @@ Create a `.tokuye/summary.ignore` file to exclude specific paths from repository
 
 ## Roadmap
 
-- [ ] MCP (Model Context Protocol) client support
+- [x] MCP (Model Context Protocol) client support
 - [ ] Slack integration for team collaboration
 - [ ] Custom system prompt configuration
 - [ ] Multi-region cost tracking
@@ -301,6 +376,7 @@ src/tokuye/
 ├── agent/              # AI agent core implementation
 ├── textual/            # TUI interface
 ├── tools/              # Agent tools (file ops, git, RAG)
+├── mcp/                # MCP client management
 │   └── strands_tools/
 │       └── repo_summary_rag/  # RAG search system
 ├── prompts/            # System prompt management

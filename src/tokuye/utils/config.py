@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Optional
+from typing import Dict, List, Optional
 
 import yaml
 from pydantic_settings import BaseSettings
@@ -7,6 +7,17 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     project_root: Optional[Path] = None
+
+    class McpServerConfig(BaseSettings):
+        """Configuration for a single MCP server."""
+        name: str
+        type: str  # "sse" or "stdio"
+        url: Optional[str] = None  # for sse
+        command: Optional[str] = None  # for stdio
+        args: Optional[List[str]] = None  # for stdio
+        env: Optional[Dict[str, str]] = None  # for stdio
+
+    mcp_servers: List[McpServerConfig] = []
 
     language: str = "en"
 
@@ -63,6 +74,19 @@ def load_yaml_config(settings_instance: Settings) -> Settings:
                 settings_instance.name = yaml_config["name"]
             if "theme" in yaml_config:
                 settings_instance.theme = yaml_config["theme"]
+            if "mcp_servers" in yaml_config:
+                mcp_configs = []
+                for server_cfg in yaml_config["mcp_servers"]:
+                    try:
+                        mcp_configs.append(
+                            Settings.McpServerConfig(**server_cfg)
+                        )
+                    except Exception as e:
+                        import logging
+                        logging.getLogger(__name__).warning(
+                            f"Invalid MCP server config: {server_cfg}, error: {e}"
+                        )
+                settings_instance.mcp_servers = mcp_configs
 
     return settings_instance
 
