@@ -1,73 +1,19 @@
 """
 GitHub Pull Request review tools using the `gh` CLI.
 
-These tools enable listing, viewing, diffing, and reviewing pull requests
+These tools enable listing, viewing, diffing, reviewing, and reading comments on pull requests
 directly from the agent, without requiring GitHub MCP Server.
 Requires `gh` CLI to be installed and authenticated.
 """
 
 import json
 import logging
-import subprocess
 from typing import Optional
 
 from strands import tool
-from tokuye.utils.config import settings
+from tokuye.tools.strands_tools.gh_utils import run_gh as _run_gh
 
 logger = logging.getLogger(__name__)
-
-
-def _run_gh(
-    args: list[str],
-    *,
-    stdin_input: Optional[str] = None,
-    max_output_chars: int = 80_000,
-) -> str:
-    """
-    Run a `gh` CLI command and return stdout.
-
-    Args:
-        args: Arguments to pass to `gh` (e.g. ["pr", "list"]).
-        stdin_input: Optional string to feed to stdin.
-        max_output_chars: Truncate stdout beyond this limit to avoid token explosion.
-
-    Returns:
-        stdout string from the command.
-
-    Raises:
-        RuntimeError: If `gh` is not found or the command fails.
-    """
-    cmd = ["gh"] + args
-    logger.info("Running: %s", " ".join(cmd))
-
-    try:
-        result = subprocess.run(
-            cmd,
-            cwd=settings.project_root,
-            input=stdin_input,
-            capture_output=True,
-            text=True,
-            timeout=60,
-        )
-    except FileNotFoundError:
-        raise RuntimeError(
-            "gh CLI is not installed. "
-            "Install it from https://cli.github.com/ and run `gh auth login`."
-        )
-    except subprocess.TimeoutExpired:
-        raise RuntimeError("gh command timed out after 60 seconds.")
-
-    if result.returncode != 0:
-        stderr = result.stderr.strip()
-        raise RuntimeError(f"gh command failed (exit {result.returncode}): {stderr}")
-
-    output = result.stdout
-    if len(output) > max_output_chars:
-        output = (
-            output[:max_output_chars]
-            + f"\n\n... (truncated at {max_output_chars} chars)"
-        )
-    return output
 
 
 # ---------------------------------------------------------------------------
@@ -447,3 +393,98 @@ def pr_review_submit(
 
     except Exception as e:
         return f"Error submitting review for PR #{pr_number}: {e}"
+
+
+# ---------------------------------------------------------------------------
+# 6. PR Get Comments (read all comments on a PR)
+# ---------------------------------------------------------------------------
+
+
+@tool(
+    name="pr_get_comments",
+    description=(
+        "Get all comments on a specific pull request by number. "
+        "Returns both general issue-level comments and inline review comments "
+        "(diff-level comments with file path and line number). "
+        "Use this to review the existing discussion history before adding a new review."
+    ),
+)
+def pr_get_comments(pr_number: int) -> str:
+    """
+    Retrieve all comments on a pull request.
+
+    Fetches two types of comments:
+    - Issue comments: general conversation on the PR thread.
+    - Review comments: inline diff comments tied to a specific file and line.
+
+    Args:
+        pr_number: The pull request number.
+
+    Returns:
+        Formatted string of all comments with author, timestamp, and body.
+    """
+    try:
+        # --- Issue-level comments (general PR thread) ---
+        raw_issue = _run_gh([
+            "api",
+            f"repos/{{owner}}/{{repo}}/issues/{pr_number}/comments",
+            "--paginate",
+        ])
+        issue_comments = json.loads(raw_issue)
+
+        # --- Review comments (inline diff comments) ---
+        raw_review = _run_gh([
+            "api",
+            f"repos/{{owner}}/{{repo}}/pulls/{pr_number}/comments",
+            "--paginate",
+        ])
+        review_comments = json.loads(raw_review)
+
+        if not issue_comments and not review_comments:
+            return f"PR #{pr_number} has no comments."
+
+        lines = [f"Comments on PR #{pr_number}:"]
+
+        if issue_comments:
+            lines.append(f"\n--- General Comments ({len(issue_comments)}) ---")
+            for c in issue_comments:
+                author = c.get("user", {}).get("login", "unknown")
+                created_at = c.get("created_at", "N/A")
+                updated_at = c.get("updated_at", "N/A")
+                body = c.get("body", "").strip()
+                lines.append(
+                    f"\n[{author}] {created_at}"
+                    + (f" (updated: {updated_at})" if updated_at != created_at else "")
+                )
+                lines.append(body)
+
+        if review_comments:
+            lines.append(f"\n--- Inline Review Comments ({len(review_comments)}) ---")
+            for c in review_comments:
+                author = c.get("user", {}).get("login", "unknown")
+                created_at = c.get("created_at", "N/A")
+                updated_at = c.get("updated_at", "N/A")
+                path = c.get("path", "unknown")
+                line = c.get("line") or c.get("original_line", "N/A")
+                diff_hunk = c.get("diff_hunk", "")
+                body = c.get("body", "").strip()
+                lines.append(
+                    f"\n[{author}] {created_at}"
+                    + (f" (updated: {updated_at})" if updated_at != created_at else "")
+                )
+                lines.append(f"  File: {path}  Line: {line}")
+                if diff_hunk:
+                    # Show only the last few lines of the hunk for context
+                    hunk_lines = diff_hunk.splitlines()
+                    snippet = (
+                        "\n".join(hunk_lines[-5:])
+                        if len(hunk_lines) > 5
+                        else diff_hunk
+                    )
+                    lines.append(f"  Diff context:\n{snippet}")
+                lines.append(body)
+
+        return "\n".join(lines)
+
+    except Exception as e:
+        return f"Error getting comments for PR #{pr_number}: {e}"
