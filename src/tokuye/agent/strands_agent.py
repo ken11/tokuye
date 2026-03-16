@@ -138,7 +138,7 @@ class StrandsAgent:
         # agent switches between thinking / executing models mid-invocation; we
         # use the model that was active when the invocation completed as the best
         # available approximation.
-        current_model_id = getattr(self.agent.model, "model_id", "") or ""
+        current_model_id = self.agent.model.config.get("model_id", "") or ""
         model_identifier: str | None = None
         if settings.bedrock_plan_model_id and settings.plan_model_identifier:
             if settings.bedrock_plan_model_id in current_model_id:

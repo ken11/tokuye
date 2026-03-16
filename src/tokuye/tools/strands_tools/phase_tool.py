@@ -75,9 +75,7 @@ def report_phase(phase: str, tool_context: ToolContext) -> str:
 
     tool_context.agent.model = target_model
     logger.info(
-        "Phase changed → %s  (model switched: %s → %s)",
+        "Phase changed → %s (model switched)",
         phase,
-        getattr(current_model, "model_id", "?"),
-        getattr(target_model, "model_id", "?"),
     )
     return f"Phase switched to: {phase}"
