@@ -9,7 +9,12 @@ from tokuye.tools.strands_tools.phase_tool import report_phase
 from tokuye.tools.strands_tools.pr_review_tools import (pr_diff, pr_list,
                                                         pr_review_comment,
                                                         pr_review_submit,
-                                                        pr_view)
+                                                        pr_view,
+                                                        pr_get_comments)
+from tokuye.tools.strands_tools.pr_create_tool import submit_pull_request
+from tokuye.tools.strands_tools.issue_tools import (issue_list,
+                                                    issue_view,
+                                                    issue_get_comments)
 from tokuye.tools.strands_tools.repo_description import \
     generate_repo_description_tool
 from tokuye.tools.strands_tools.repo_summary import repo_summarize
@@ -43,5 +48,10 @@ all_tools = [
     pr_diff,
     pr_review_comment,
     pr_review_submit,
+    pr_get_comments,
+    submit_pull_request,
+    issue_list,
+    issue_view,
+    issue_get_comments,
     report_phase,
 ]
