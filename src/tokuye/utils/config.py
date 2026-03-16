@@ -42,6 +42,8 @@ class Settings(BaseSettings):
     pr_branch_prefix: str = "tokuye/"
     max_steps: int = 100
 
+    system_prompt_markdown_path: Optional[str] = ""
+
     strands_session_dir: str = "sessions"
 
     class Config:
@@ -125,6 +127,7 @@ def _apply_yaml_to_settings(
         "pr_branch_prefix",
         "strands_session_dir",
         "name",
+        "system_prompt_markdown_path",
         "theme",
     ]
     for key in simple_keys:
