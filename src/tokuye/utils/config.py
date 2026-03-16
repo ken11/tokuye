@@ -35,6 +35,7 @@ class Settings(BaseSettings):
 
     bedrock_model_id: str = "global.anthropic.claude-sonnet-4-6"
     model_identifier: str = ""
+    bedrock_plan_model_id: str = ""
     bedrock_embedding_model_id: str = "amazon.titan-embed-text-v2:0"
     model_temperature: float = 0.2
     pr_branch_prefix: str = "tokuye/"
@@ -118,6 +119,7 @@ def _apply_yaml_to_settings(
     simple_keys = [
         "bedrock_model_id",
         "bedrock_embedding_model_id",
+        "bedrock_plan_model_id",
         "model_temperature",
         "pr_branch_prefix",
         "strands_session_dir",

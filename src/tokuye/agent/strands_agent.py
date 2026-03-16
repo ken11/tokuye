@@ -10,6 +10,7 @@ from strands.types.event_loop import Usage
 from tokuye.prompts.prompt_loader import load_prompt, load_prompt_if_exists
 from tokuye.mcp import MCPClientManager
 from tokuye.tools.strands_tools import all_tools
+from tokuye.tools.strands_tools.phase_tool import configure_phase_models
 from tokuye.utils.config import settings
 from tokuye.utils.token_tracker import token_tracker
 
@@ -37,12 +38,43 @@ class StrandsAgent:
         elif settings.language == "en":
             self.system_prompt = load_prompt("system_prompt_en.md")
             self.summary_prompt = load_prompt_if_exists("summary_prompt_en.md")
+
+        # --- Model setup -------------------------------------------------
+        # The "executing" model is always the primary bedrock_model_id.
         self.model = BedrockModel(
             cache_prompt="default",
             cache_tools="default",
             model_id=settings.bedrock_model_id,
             temperature=settings.model_temperature,
         )
+
+        # When bedrock_plan_model_id is configured, create a separate
+        # "thinking" model and wire up the phase-switching tool.
+        if settings.bedrock_plan_model_id:
+            thinking_model = BedrockModel(
+                cache_prompt="default",
+                cache_tools="default",
+                model_id=settings.bedrock_plan_model_id,
+                temperature=settings.model_temperature,
+            )
+            configure_phase_models(
+                thinking=thinking_model,
+                executing=self.model,
+            )
+            # Start the agent on the thinking model (first turn is usually
+            # investigation / planning).
+            initial_model = thinking_model
+            logger.info(
+                "Phase-based model switching enabled: thinking=%s, executing=%s",
+                settings.bedrock_plan_model_id,
+                settings.bedrock_model_id,
+            )
+        else:
+            initial_model = self.model
+            logger.info(
+                "Phase-based model switching disabled (bedrock_plan_model_id not set)"
+            )
+
         self.session_dir = settings.strands_session_dir
         if not self.session_dir:
             self.session_dir = os.path.join(settings.project_root, ".tokuye", "sessions")
@@ -60,7 +92,7 @@ class StrandsAgent:
         combined_tools = list(all_tools) + mcp_tools
 
         self.agent = Agent(
-            model=self.model,
+            model=initial_model,
             tools=combined_tools,
             system_prompt=self.system_prompt,
             session_manager=self.session_manager,
