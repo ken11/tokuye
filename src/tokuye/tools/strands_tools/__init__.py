@@ -5,6 +5,7 @@ from tokuye.tools.strands_tools.file_management import (copy_file, file_delete,
                                                         write_file)
 from tokuye.tools.strands_tools.git_tools import commit_changes, create_branch
 from tokuye.tools.strands_tools.patch_tools import apply_patch
+from tokuye.tools.strands_tools.phase_tool import report_phase
 from tokuye.tools.strands_tools.pr_review_tools import (pr_diff, pr_list,
                                                         pr_review_comment,
                                                         pr_review_submit,
@@ -42,4 +43,5 @@ all_tools = [
     pr_diff,
     pr_review_comment,
     pr_review_submit,
+    report_phase,
 ]
