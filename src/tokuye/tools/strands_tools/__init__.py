@@ -3,7 +3,7 @@ from tokuye.tools.strands_tools.file_management import (copy_file, file_delete,
                                                         list_directory,
                                                         move_file, read_lines,
                                                         write_file)
-from tokuye.tools.strands_tools.git_tools import commit_changes, create_branch
+from tokuye.tools.strands_tools.git_tools import commit_changes, create_branch, git_push
 from tokuye.tools.strands_tools.patch_tools import apply_patch
 from tokuye.tools.strands_tools.phase_tool import report_phase
 from tokuye.tools.strands_tools.pr_review_tools import (pr_diff, pr_list,
@@ -38,6 +38,7 @@ all_tools = [
     list_directory,
     create_branch,
     commit_changes,
+    git_push,
     repo_summarize,
     generate_repo_description_tool,
     search_code_repository,
