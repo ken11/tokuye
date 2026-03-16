@@ -72,59 +72,118 @@ def _expand_env_vars(value: str) -> str:
     return re.sub(r"\$\{([^}]+)}", _replacer, value)
 
 
-def load_yaml_config(settings_instance: Settings) -> Settings:
+def _get_global_config_path() -> Path:
+    """Return the path to the global config file.
+
+    Uses ``$XDG_CONFIG_HOME/tokuye/config.yaml`` if the environment variable
+    is set, otherwise falls back to ``~/.config/tokuye/config.yaml``.
     """
-    Load settings from .tokuye/config.yaml and update settings instance
+    xdg = os.environ.get("XDG_CONFIG_HOME")
+    if xdg:
+        base = Path(xdg)
+    else:
+        base = Path.home() / ".config"
+    return base / "tokuye" / "config.yaml"
+
+
+def _parse_mcp_servers(raw_list: list) -> List[Settings.McpServerConfig]:
+    """Parse a list of raw MCP server dicts into ``McpServerConfig`` objects."""
+    configs: List[Settings.McpServerConfig] = []
+    for server_cfg in raw_list:
+        try:
+            if "env" in server_cfg and isinstance(server_cfg["env"], dict):
+                server_cfg["env"] = {
+                    k: _expand_env_vars(v)
+                    for k, v in server_cfg["env"].items()
+                }
+            configs.append(Settings.McpServerConfig(**server_cfg))
+        except Exception as e:
+            logger.warning("Invalid MCP server config: %s, error: %s", server_cfg, e)
+    return configs
+
+
+def _apply_yaml_to_settings(
+    settings_instance: Settings,
+    yaml_config: dict,
+    merge_mcp: bool = False,
+) -> None:
+    """Apply *yaml_config* values onto *settings_instance* in-place.
+
+    When *merge_mcp* is ``True`` the ``mcp_servers`` list is **merged** with
+    the existing value instead of replaced.  Servers whose ``name`` matches an
+    existing entry are replaced; others are appended.  This allows a project
+    config to override individual servers defined in the global config while
+    keeping the rest.
+    """
+    simple_keys = [
+        "bedrock_model_id",
+        "bedrock_embedding_model_id",
+        "model_temperature",
+        "pr_branch_prefix",
+        "strands_session_dir",
+        "name",
+        "theme",
+    ]
+    for key in simple_keys:
+        if key in yaml_config:
+            setattr(settings_instance, key, yaml_config[key])
+
+    if "mcp_servers" in yaml_config:
+        new_servers = _parse_mcp_servers(yaml_config["mcp_servers"])
+        if merge_mcp and settings_instance.mcp_servers:
+            # Build a dict keyed by server name from the existing list
+            merged: dict[str, Settings.McpServerConfig] = {
+                s.name: s for s in settings_instance.mcp_servers
+            }
+            # Project-side entries override by name; new names are appended
+            for s in new_servers:
+                merged[s.name] = s
+            settings_instance.mcp_servers = list(merged.values())
+        else:
+            settings_instance.mcp_servers = new_servers
+
+
+def load_yaml_config(settings_instance: Settings) -> Settings:  # noqa: C901
+    """
+    Load settings from global and project config.yaml files.
+
+    Resolution order (later wins):
+      1. Pydantic defaults / ``.env``
+      2. Global config  — ``$XDG_CONFIG_HOME/tokuye/config.yaml``
+      3. Project config — ``<project_root>/.tokuye/config.yaml``
+
+    ``mcp_servers`` is special-cased: the project list is **merged** with the
+    global list rather than replacing it.  See :func:`_apply_yaml_to_settings`.
     """
     if not settings_instance.project_root:
         raise ValueError("project_root must be set before loading YAML config")
 
     config_path = settings_instance.project_root / ".tokuye" / "config.yaml"
 
-    # Load only if config.yaml exists
-    if config_path.exists():
-        with open(config_path, "r") as f:
-            yaml_config = yaml.safe_load(f)
+    # --- 1. Global config ------------------------------------------------
+    global_path = _get_global_config_path()
+    if global_path.exists():
+        try:
+            with open(global_path, "r") as f:
+                global_cfg = yaml.safe_load(f)
+            if global_cfg:
+                _apply_yaml_to_settings(settings_instance, global_cfg)
+                logger.info("Loaded global config from %s", global_path)
+        except Exception as e:
+            logger.warning("Failed to load global config (%s): %s", global_path, e)
 
-        # Overwrite with settings loaded from YAML
-        if yaml_config:
-            if "bedrock_model_id" in yaml_config:
-                settings_instance.bedrock_model_id = yaml_config["bedrock_model_id"]
-            if "bedrock_embedding_model_id" in yaml_config:
-                settings_instance.bedrock_embedding_model_id = yaml_config[
-                    "bedrock_embedding_model_id"
-                ]
-            if "model_temperature" in yaml_config:
-                settings_instance.model_temperature = yaml_config["model_temperature"]
-            if "pr_branch_prefix" in yaml_config:
-                settings_instance.pr_branch_prefix = yaml_config["pr_branch_prefix"]
-            if "strands_session_dir" in yaml_config:
-                settings_instance.strands_session_dir = yaml_config[
-                    "strands_session_dir"
-                ]
-            if "name" in yaml_config:
-                settings_instance.name = yaml_config["name"]
-            if "theme" in yaml_config:
-                settings_instance.theme = yaml_config["theme"]
-            if "mcp_servers" in yaml_config:
-                mcp_configs = []
-                for server_cfg in yaml_config["mcp_servers"]:
-                    try:
-                        # Expand ${ENV_VAR} references in env values
-                        if "env" in server_cfg and isinstance(server_cfg["env"], dict):
-                            server_cfg["env"] = {
-                                k: _expand_env_vars(v)
-                                for k, v in server_cfg["env"].items()
-                            }
-                        mcp_configs.append(
-                            Settings.McpServerConfig(**server_cfg)
-                        )
-                    except Exception as e:
-                        import logging
-                        logging.getLogger(__name__).warning(
-                            f"Invalid MCP server config: {server_cfg}, error: {e}"
-                        )
-                settings_instance.mcp_servers = mcp_configs
+    # --- 2. Project config (overrides global; mcp_servers are merged) -----
+    if config_path.exists():
+        try:
+            with open(config_path, "r") as f:
+                project_cfg = yaml.safe_load(f)
+            if project_cfg:
+                _apply_yaml_to_settings(
+                    settings_instance, project_cfg, merge_mcp=True
+                )
+                logger.info("Loaded project config from %s", config_path)
+        except Exception as e:
+            logger.warning("Failed to load project config (%s): %s", config_path, e)
 
     return settings_instance
 

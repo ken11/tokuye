@@ -213,7 +213,17 @@ Tokuye exclusively supports AWS Bedrock for LLM access. This isn't a limitation 
 
 ## Configuration
 
-Create a `.tokuye/config.yaml` file in your project root:
+Tokuye supports two layers of configuration. Settings are resolved in the following order (later wins):
+
+1. **Pydantic defaults / `.env`**
+2. **Global config** — `$XDG_CONFIG_HOME/tokuye/config.yaml` (default: `~/.config/tokuye/config.yaml`)
+3. **Project config** — `<project_root>/.tokuye/config.yaml`
+
+> **Exception:** `mcp_servers` is **merged** across global and project configs instead of being replaced. See [MCP Server Merging](#mcp-server-merging) for details.
+
+### Project Config
+
+Create a `.tokuye/config.yaml` in your project root:
 
 ```yaml
 # Model Configuration
@@ -231,6 +241,37 @@ strands_session_dir: sessions
 name: Alice  # Agent character name
 theme: tokyo-night  # Textual theme (see Textual docs for options)
 ```
+
+### Global Config
+
+To avoid repeating the same settings in every project, create a global config:
+
+```bash
+# Create the directory
+mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/tokuye"
+
+# Create the global config
+cat > "${XDG_CONFIG_HOME:-$HOME/.config}/tokuye/config.yaml" << 'EOF'
+bedrock_model_id: global.anthropic.claude-sonnet-4-5-20250929-v1:0
+model_temperature: 0.2
+name: Alice
+
+mcp_servers:
+  - name: "github-mcp"
+    type: "stdio"
+    command: "npx"
+    args: ["-y", "@modelcontextprotocol/server-github"]
+    env:
+      GITHUB_PERSONAL_ACCESS_TOKEN: "${GITHUB_TOKEN}"
+EOF
+```
+
+Any key set here applies to **all** projects. If the same key (except `mcp_servers`) appears in a project config, the project value takes precedence.
+
+| Scope | Path | Wins for scalar keys | `mcp_servers` behaviour |
+|-------|------|---------------------|------------------------|
+| Global | `$XDG_CONFIG_HOME/tokuye/config.yaml` | Only if project doesn't set it | Base list |
+| Project | `<project_root>/.tokuye/config.yaml` | Always | Merged onto global list |
 
 ### MCP (Model Context Protocol) Support
 
@@ -330,6 +371,67 @@ mcp_servers:
     type: "sse"
     url: "http://localhost:3000/sse"
 ```
+
+#### MCP Server Merging
+
+`mcp_servers` is the only config key that is **merged** between global and project configs. All other keys are simply overridden by the project config.
+
+**How merging works:**
+
+1. Global `mcp_servers` are loaded first as the base list.
+2. Project `mcp_servers` are applied on top:
+   - If a server has the **same `name`** as a global entry, the **project entry replaces it entirely**.
+   - If a server has a **new `name`**, it is **appended** to the list.
+   - Global entries whose `name` does not appear in the project config are **kept as-is**.
+
+**Example:**
+
+```yaml
+# Global config (~/.config/tokuye/config.yaml)
+mcp_servers:
+  - name: "github"
+    type: "stdio"
+    command: "npx"
+    args: ["-y", "@modelcontextprotocol/server-github"]
+    env:
+      GITHUB_PERSONAL_ACCESS_TOKEN: "${GITHUB_TOKEN}"
+
+  - name: "slack"
+    type: "stdio"
+    command: "npx"
+    args: ["-y", "@anthropic/mcp-server-slack"]
+    env:
+      SLACK_BOT_TOKEN: "${SLACK_BOT_TOKEN}"
+```
+
+```yaml
+# Project config (.tokuye/config.yaml)
+mcp_servers:
+  # Override "github" — use different allowed_tools for this project
+  - name: "github"
+    type: "stdio"
+    command: "npx"
+    args: ["-y", "@modelcontextprotocol/server-github"]
+    env:
+      GITHUB_PERSONAL_ACCESS_TOKEN: "${GITHUB_TOKEN}"
+    allowed_tools:
+      - "get_pull_request"
+      - "list_pull_requests"
+
+  # Add a project-specific server
+  - name: "filesystem"
+    type: "stdio"
+    command: "npx"
+    args: ["-y", "@modelcontextprotocol/server-filesystem", "/tmp/sandbox"]
+```
+
+**Result:** The agent sees three MCP servers:
+
+| Server | Source | Notes |
+|--------|--------|-------|
+| `github` | Project | Replaced — project version has `allowed_tools` |
+| `slack` | Global | Kept — not mentioned in project config |
+| `filesystem` | Project | Added — new entry |
 
 > **Note**: MCP support requires the `strands-agents-tools[mcp]` extra, which is included by default. If you encounter import errors, ensure the `mcp` package is installed: `pip install 'mcp>=1.23.0,<2.0.0'`
 
