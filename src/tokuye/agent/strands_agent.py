@@ -7,7 +7,7 @@ from strands.agent.conversation_manager import SummarizingConversationManager
 from strands.models import BedrockModel
 from strands.session.file_session_manager import FileSessionManager
 from strands.types.event_loop import Usage
-from tokuye.prompts.prompt_loader import load_prompt, load_prompt_if_exists
+from tokuye.prompts.prompt_loader import load_custom_system_prompt, load_prompt, load_prompt_if_exists
 from tokuye.mcp import MCPClientManager
 from tokuye.tools.strands_tools import all_tools
 from tokuye.tools.strands_tools.phase_tool import configure_phase_models
@@ -32,11 +32,21 @@ class StrandsAgent:
         self.add_system_message = add_system_message
         self.set_thinking = set_thinking
         self.update_token_usage = update_token_usage
-        if settings.language == "ja":
+        if settings.system_prompt_markdown_path:
+            self.system_prompt = load_custom_system_prompt(
+                settings.system_prompt_markdown_path
+            )
+            logger.info(
+                "Using custom system prompt: %s",
+                settings.system_prompt_markdown_path,
+            )
+        elif settings.language == "ja":
             self.system_prompt = load_prompt("system_prompt.md")
-            self.summary_prompt = load_prompt_if_exists("summary_prompt.md")
         elif settings.language == "en":
             self.system_prompt = load_prompt("system_prompt_en.md")
+        if settings.language == "ja":
+            self.summary_prompt = load_prompt_if_exists("summary_prompt.md")
+        else:
             self.summary_prompt = load_prompt_if_exists("summary_prompt_en.md")
 
         # --- Model setup -------------------------------------------------
