@@ -132,7 +132,19 @@ class StrandsAgent:
         latest = result.metrics.latest_agent_invocation
         if latest is None:
             return
-        token_tracker.add_usage(latest.usage)
+
+        # Determine which model was active at the end of this invocation so we
+        # can pick the correct cost table.  When bedrock_plan_model_id is set the
+        # agent switches between thinking / executing models mid-invocation; we
+        # use the model that was active when the invocation completed as the best
+        # available approximation.
+        current_model_id = getattr(self.agent.model, "model_id", "") or ""
+        model_identifier: str | None = None
+        if settings.bedrock_plan_model_id and settings.plan_model_identifier:
+            if settings.bedrock_plan_model_id in current_model_id:
+                model_identifier = settings.plan_model_identifier
+
+        token_tracker.add_usage(latest.usage, model_identifier=model_identifier)
         turn_usage_summary = token_tracker.format_usage_summary()
         self.update_token_usage(turn_usage_summary)
 

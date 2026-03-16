@@ -52,6 +52,14 @@ def main(
     if "claude-opus-4-6-" in settings.bedrock_model_id:
         settings.model_identifier = "opus-4-6"
 
+    if settings.bedrock_plan_model_id:
+        if "claude-sonnet-4-6" in settings.bedrock_plan_model_id:
+            settings.plan_model_identifier = "sonnet-4-6"
+        if "claude-haiku-4-5-" in settings.bedrock_plan_model_id:
+            settings.plan_model_identifier = "haiku-4-5"
+        if "claude-opus-4-6-" in settings.bedrock_plan_model_id:
+            settings.plan_model_identifier = "opus-4-6"
+
     validate_settings()
     token_tracker.set_cost_table()
 

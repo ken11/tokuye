@@ -1,6 +1,6 @@
 import threading
 import time
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from tokuye.utils.config import settings
 
@@ -46,11 +46,19 @@ class TokenUsageTracker:
         # Token usage for entire session
         self._session_usage: Dict[str, int] = self._create_empty_usage_dict()
 
-        # History log (with timestamps)
-        self._usage_history: List[Tuple[float, Dict[str, int]]] = []
+        # Accumulated cost in USD (model-aware, computed at add_usage time)
+        self._current_turn_cost_usd: float = 0.0
+        self._session_cost_usd: float = 0.0
+
+        # History log (with timestamps) — each entry: (timestamp, usage_dict, turn_cost_usd)
+        self._usage_history: List[Tuple[float, Dict[str, int], float]] = []
 
     def set_cost_table(self):
         self.cost_table = MODEL_COST[settings.model_identifier]
+        if settings.plan_model_identifier and settings.plan_model_identifier in MODEL_COST:
+            self.plan_cost_table = MODEL_COST[settings.plan_model_identifier]
+        else:
+            self.plan_cost_table = None
 
     def _create_empty_usage_dict(self) -> Dict[str, int]:
         """Create empty token usage dictionary"""
@@ -70,19 +78,29 @@ class TokenUsageTracker:
             # Add current turn usage to history (only if tokens were used)
             if sum(self._current_turn_usage.values()) > 0:
                 self._usage_history.append(
-                    (time.time(), self._current_turn_usage.copy())
+                    (time.time(), self._current_turn_usage.copy(), self._current_turn_cost_usd)
                 )
 
             # Reset counters for new turn
             self._current_turn_usage = self._create_empty_usage_dict()
+            self._current_turn_cost_usd = 0.0
 
-    def add_usage(self, usage: Dict):
+    def _resolve_cost_table(self, model_identifier: Optional[str]) -> Dict:
+        """Return the cost table for the given model_identifier, falling back to the default."""
+        if model_identifier and self.plan_cost_table is not None:
+            if model_identifier == settings.plan_model_identifier:
+                return self.plan_cost_table
+        return self.cost_table
+
+    def add_usage(self, usage: Dict, model_identifier: Optional[str] = None):
         """
         Add token usage from a single LLM call to the current turn total
         and session total.
 
         Args:
-            usage_metadata: Token usage metadata from LLM response
+            usage: Token usage metadata from LLM response
+            model_identifier: Optional model identifier to select the correct cost table.
+                              If None, falls back to the default (executing model) cost table.
         """
         with self._lock:
             input_tokens = usage.get("inputTokens", 0)
@@ -106,6 +124,17 @@ class TokenUsageTracker:
             # Also update session-wide usage
             self._session_usage["cache_creation_tokens"] += cache_creation
             self._session_usage["cache_read_tokens"] += cache_read
+
+            # Compute cost immediately using the correct model's cost table
+            table = self._resolve_cost_table(model_identifier)
+            call_cost_usd = (
+                self.calculate_cost(input_tokens, table["input"])
+                + self.calculate_cost(output_tokens, table["output"])
+                + self.calculate_cost(cache_creation, table["cache_write"])
+                + self.calculate_cost(cache_read, table["cache_read"])
+            )
+            self._current_turn_cost_usd += call_cost_usd
+            self._session_cost_usd += call_cost_usd
 
     def add_embedding_usage(self, token_count: int):
         """
@@ -159,43 +188,19 @@ class TokenUsageTracker:
 
     def get_total_cost(self) -> float:
         """
-        Get cumulative cost for entire session in Japanese Yen
+        Get cumulative cost for entire session.
 
         Returns:
-            Cumulative cost (Japanese Yen)
+            Cumulative cost in USD (language=="en") or JPY (language=="ja")
         """
         with self._lock:
-            usage = self._session_usage
-
-            # Calculate cost for each token type (USD)
-            input_cost = self.calculate_cost(
-                usage["input_tokens"], self.cost_table["input"]
-            )
-            output_cost = self.calculate_cost(
-                usage["output_tokens"], self.cost_table["output"]
-            )
-
-            # Cache cost
-            cache_creation_cost = self.calculate_cost(
-                usage["cache_creation_tokens"], self.cost_table["cache_write"]
-            )
-            cache_read_cost = self.calculate_cost(
-                usage["cache_read_tokens"], self.cost_table["cache_read"]
-            )
-
-            # Embedding cost
+            # Embedding cost (not tracked in _session_cost_usd)
             embedding_cost = self.calculate_cost(
-                usage["embedding_tokens"], self.EMBEDDING_TOKEN_PRICE
+                self._session_usage["embedding_tokens"], self.EMBEDDING_TOKEN_PRICE
             )
 
-            # Total cost (USD)
-            total_cost_usd = (
-                input_cost
-                + output_cost
-                + cache_creation_cost
-                + cache_read_cost
-                + embedding_cost
-            )
+            # LLM cost is already accumulated model-aware; add embedding on top
+            total_cost_usd = self._session_cost_usd + embedding_cost
 
             if settings.language == "en":
                 return total_cost_usd
@@ -229,18 +234,12 @@ class TokenUsageTracker:
         """
         total = usage["input_tokens"] + usage["output_tokens"]
 
-        # Calculate cost for each token type (USD)
-        input_cost = self.calculate_cost(usage["input_tokens"], self.cost_table["input"])
-        output_cost = self.calculate_cost(
-            usage["output_tokens"], self.cost_table["output"]
-        )
-        total_cost = input_cost + output_cost
-
-        # Convert to JPY
-        total_cost_jpy = total_cost * self.EXCHANGE_RATE
+        # Use the pre-computed turn cost (model-aware)
+        turn_cost_usd = self._current_turn_cost_usd
+        turn_cost_jpy = turn_cost_usd * self.EXCHANGE_RATE
 
         details = f"{total:,} total ({usage['input_tokens']:,} input + {usage['output_tokens']:,} output)"
-        details += f" | Cost: ${total_cost:.6f} (¥{total_cost_jpy:.2f})"
+        details += f" | Cost: ${turn_cost_usd:.6f} (¥{turn_cost_jpy:.2f})"
 
         # Add cache information if available
         if usage["cache_creation_tokens"] > 0 or usage["cache_read_tokens"] > 0:
@@ -309,25 +308,17 @@ class TokenUsageTracker:
             recent_history = self._usage_history[-max_entries:]
 
             lines = ["📜 Token Usage History:"]
-            for timestamp, usage in recent_history:
+            for timestamp, usage, turn_cost_usd in recent_history:
                 # Format timestamp
                 time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(timestamp))
 
                 # Total token count and breakdown
                 total = usage["input_tokens"] + usage["output_tokens"]
 
-                # Calculate cost
-                input_cost = self.calculate_cost(
-                    usage["input_tokens"], self.cost_table["input"]
-                )
-                output_cost = self.calculate_cost(
-                    usage["output_tokens"], self.cost_table["output"]
-                )
-                total_cost = input_cost + output_cost
-                total_cost_jpy = total_cost * self.EXCHANGE_RATE
+                turn_cost_jpy = turn_cost_usd * self.EXCHANGE_RATE
 
                 # Add entry
-                lines.append(f"[{time_str}] {total:,} tokens (¥{total_cost_jpy:.2f})")
+                lines.append(f"[{time_str}] {total:,} tokens (¥{turn_cost_jpy:.2f})")
 
             return "\n".join(lines)
 
