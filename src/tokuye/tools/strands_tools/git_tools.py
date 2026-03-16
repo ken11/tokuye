@@ -80,3 +80,44 @@ def commit_changes(message: str) -> str:
         return f"Committed to branch '{repo.active_branch.name}' (SHA: {commit.hexsha}):{files_str}"
     except Exception as e:
         return f"Error committing changes: {str(e)}"
+
+
+@tool(
+    name="git_push",
+    description=(
+        "Push the current branch to the remote repository (always origin). "
+        "Sets the upstream tracking branch automatically so new branches are handled correctly. "
+        "Use this before submit_pull_request to ensure the branch exists on the remote. "
+        "IMPORTANT: Only call this when explicitly instructed by the user."
+    ),
+)
+def git_push() -> str:
+    """
+    Push the current branch to the remote repository.
+
+    Returns:
+        Result message including the branch and remote pushed to.
+    """
+    remote = "origin"
+    try:
+        repo = Repo(settings.project_root)
+        branch_name = repo.active_branch.name
+
+        push_infos = repo.remote(remote).push(
+            refspec=f"{branch_name}:{branch_name}",
+            set_upstream=True,
+        )
+
+        messages = []
+        for info in push_infos:
+            if info.flags & info.ERROR:
+                return f"Error pushing branch '{branch_name}' to '{remote}': {info.summary}"
+            messages.append(info.summary.strip())
+
+        summary = "; ".join(messages) if messages else "(no summary)"
+        return (
+            f"Pushed branch '{branch_name}' to '{remote}' successfully.\n"
+            f"  Summary: {summary}"
+        )
+    except Exception as e:
+        return f"Error pushing branch: {str(e)}"
