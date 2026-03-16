@@ -95,8 +95,12 @@ class StrandsAgent:
                         self.add_ai_message(c["text"])
 
     def _update_token_usage(self, result: AgentResult):
-        usage: Usage = result.metrics.accumulated_usage
-        token_tracker.add_usage(usage)
+        # Use latest_agent_invocation.usage (this invocation only) instead of
+        # accumulated_usage (all invocations) to avoid double-counting across turns.
+        latest = result.metrics.latest_agent_invocation
+        if latest is None:
+            return
+        token_tracker.add_usage(latest.usage)
         turn_usage_summary = token_tracker.format_usage_summary()
         self.update_token_usage(turn_usage_summary)
 
