@@ -261,11 +261,11 @@ Set `bedrock_plan_model_id` in your `.tokuye/config.yaml` to enable this feature
 
 ```yaml
 # Primary model — used for executing phase (file writes, patches, commits)
-bedrock_model_id: global.anthropic.claude-sonnet-4-5-20250929-v1:0
+bedrock_model_id: global.anthropic.claude-sonnet-4-6
 
 # Plan model — used for thinking phase (investigation, analysis, planning)
 # When set, phase-based model switching is activated.
-bedrock_plan_model_id: global.anthropic.claude-haiku-4-5-20251001-v1:0
+bedrock_plan_model_id: global.anthropic.claude-opus-4-6-v1
 
 model_temperature: 0.2
 ```
