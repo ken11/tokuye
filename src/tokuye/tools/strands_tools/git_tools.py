@@ -85,22 +85,20 @@ def commit_changes(message: str) -> str:
 @tool(
     name="git_push",
     description=(
-        "Push the current branch to the remote repository (origin). "
+        "Push the current branch to the remote repository (always origin). "
         "Sets the upstream tracking branch automatically so new branches are handled correctly. "
         "Use this before submit_pull_request to ensure the branch exists on the remote. "
         "IMPORTANT: Only call this when explicitly instructed by the user."
     ),
 )
-def git_push(remote: str = "origin") -> str:
+def git_push() -> str:
     """
     Push the current branch to the remote repository.
-
-    Args:
-        remote: Remote name to push to. Defaults to "origin".
 
     Returns:
         Result message including the branch and remote pushed to.
     """
+    remote = "origin"
     try:
         repo = Repo(settings.project_root)
         branch_name = repo.active_branch.name
