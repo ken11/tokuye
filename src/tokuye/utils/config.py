@@ -1,8 +1,14 @@
+import logging
+import os
+import re
 from pathlib import Path
 from typing import Dict, List, Optional
 
 import yaml
 from pydantic_settings import BaseSettings
+
+
+logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
@@ -40,6 +46,30 @@ class Settings(BaseSettings):
         env_file = ".env"
         env_file_encoding = "utf-8"
         extra = "ignore"
+
+
+def _expand_env_vars(value: str) -> str:
+    """Expand ``${VAR}`` references in *value* with environment variables.
+
+    - ``${VAR}`` is replaced with the value of the environment variable ``VAR``.
+    - If the variable is not set, it is replaced with an empty string and a
+      warning is logged.
+    - Literal text without ``${…}`` is returned unchanged.
+    """
+
+    def _replacer(match: re.Match) -> str:
+        var_name = match.group(1)
+        env_value = os.environ.get(var_name)
+        if env_value is None:
+            logger.warning(
+                "Environment variable '%s' referenced in config.yaml is not set; "
+                "substituting empty string",
+                var_name,
+            )
+            return ""
+        return env_value
+
+    return re.sub(r"\$\{([^}]+)}", _replacer, value)
 
 
 def load_yaml_config(settings_instance: Settings) -> Settings:
@@ -80,6 +110,12 @@ def load_yaml_config(settings_instance: Settings) -> Settings:
                 mcp_configs = []
                 for server_cfg in yaml_config["mcp_servers"]:
                     try:
+                        # Expand ${ENV_VAR} references in env values
+                        if "env" in server_cfg and isinstance(server_cfg["env"], dict):
+                            server_cfg["env"] = {
+                                k: _expand_env_vars(v)
+                                for k, v in server_cfg["env"].items()
+                            }
                         mcp_configs.append(
                             Settings.McpServerConfig(**server_cfg)
                         )
