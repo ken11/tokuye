@@ -23,6 +23,10 @@ MODEL_COST = {
         "cache_write": 0.00625,
         "cache_read": 0.0005,
     },
+    "devstral-2": {
+        "input": 0.00048,
+        "output": 0.0024,
+    },
 }
 
 
@@ -130,8 +134,8 @@ class TokenUsageTracker:
             call_cost_usd = (
                 self.calculate_cost(input_tokens, table["input"])
                 + self.calculate_cost(output_tokens, table["output"])
-                + self.calculate_cost(cache_creation, table["cache_write"])
-                + self.calculate_cost(cache_read, table["cache_read"])
+                + self.calculate_cost(cache_creation, table.get("cache_write", 0.0))
+                + self.calculate_cost(cache_read, table.get("cache_read", 0.0))
             )
             self._current_turn_cost_usd += call_cost_usd
             self._session_cost_usd += call_cost_usd
