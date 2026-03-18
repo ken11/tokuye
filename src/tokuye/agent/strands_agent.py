@@ -26,6 +26,16 @@ def _supports_prompt_cache(model_id: str) -> bool:
     return "anthropic" in model_id.lower() or "nova-pro-v1" in model_id.lower()
 
 
+def _supports_tool_cache(model_id: str) -> bool:
+    """Return True if the model supports caching tool definitions on Bedrock.
+
+    Nova models only support message-level caching; tool-level caching
+    (cachePoint in toolConfig) is not permitted and causes a ValidationException.
+    Only Anthropic (Claude) models support cache_tools.
+    """
+    return "anthropic" in model_id.lower()
+
+
 class MaxStepsException(Exception):
 
     def __init__(self, message: str):
@@ -66,11 +76,10 @@ class StrandsAgent:
         # --- Model setup -------------------------------------------------
         # The "executing" model is always the primary bedrock_model_id.
         _exec_cache = _supports_prompt_cache(settings.bedrock_model_id)
+        _exec_tool_cache = _supports_tool_cache(settings.bedrock_model_id)
         self.model = BedrockModel(
-            **({
-                "cache_prompt": "default",
-                "cache_tools": "default",
-            } if _exec_cache else {}),
+            **({"cache_prompt": "default"} if _exec_cache else {}),
+            **({"cache_tools": "default"} if _exec_tool_cache else {}),
             model_id=settings.bedrock_model_id,
             temperature=settings.model_temperature,
         )
@@ -79,11 +88,10 @@ class StrandsAgent:
         # "thinking" model and wire up the phase-switching tool.
         if settings.bedrock_plan_model_id:
             _plan_cache = _supports_prompt_cache(settings.bedrock_plan_model_id)
+            _plan_tool_cache = _supports_tool_cache(settings.bedrock_plan_model_id)
             thinking_model = BedrockModel(
-                **({
-                    "cache_prompt": "default",
-                    "cache_tools": "default",
-                } if _plan_cache else {}),
+                **({"cache_prompt": "default"} if _plan_cache else {}),
+                **({"cache_tools": "default"} if _plan_tool_cache else {}),
                 model_id=settings.bedrock_plan_model_id,
                 temperature=settings.model_temperature,
             )
