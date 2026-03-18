@@ -48,6 +48,11 @@ class StrandsAgent:
                 "Using custom system prompt: %s",
                 settings.system_prompt_markdown_path,
             )
+        elif settings.model_identifier == "devstral-2":
+            self.system_prompt = load_prompt("system_prompt_devstral.md")
+            logger.info(
+                "Using Devstral-specific system prompt: system_prompt_devstral.md"
+            )
         elif settings.language == "ja":
             self.system_prompt = load_prompt("system_prompt.md")
         elif settings.language == "en":
