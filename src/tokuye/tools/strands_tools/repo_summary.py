@@ -12,7 +12,7 @@ import textwrap
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 from xml.sax.saxutils import escape as xml_escape
 
 import chardet
@@ -472,72 +472,6 @@ def _build_dir_tree(files: List[Path], root: Path) -> List[str]:
     return tree_lines
 
 
-def render_markdown(summary: RepoSummary, *, full: bool = True) -> str:
-    """
-    Markdown version report
-      1. Header (statistics)
-      2. Directory tree (unlimited)
-      3. File list table
-      4. Code blocks for each file (full text or excerpt)
-    """
-    from tabulate import tabulate
-
-    header = textwrap.dedent(f"# repo-summary ({summary.generated_at})").lstrip()
-
-    about = textwrap.dedent(
-        """## about
-
-### purpose
-This file is a one-file compilation of the contents of the Git repository for use as input to the LLM.
-
-This file contains the following content
-- stats is simple statistics.
-- tree is the overall structure of directories and files.
-- files is the contents of all files.
-
-### notes
-- This file is read-only. Editing should be done directly in the appropriate file.
-- Files contained in .gitignore are excluded.
-- May contain sensitive information. Please handle with care.
-"""
-    ).lstrip()
-
-    stats = textwrap.dedent(
-        f"""## stats
-
-- **Root**: `{summary.repo_root}`
-- **Files**: {summary.total_files}
-- **Characters**: {summary.total_chars:,}
-"""
-    ).lstrip()
-
-    tree = textwrap.dedent(
-        f"""## tree
-```
-{chr(10).join(summary.tree)}
-```
-"""
-    ).lstrip()
-
-    files_sorted = sorted(summary.files, key=lambda f: f.lines, reverse=True)
-    table_md = tabulate(
-        [[f.path, f.lines, f.chars] for f in files_sorted],
-        headers=["file", "lines", "chars"],
-        tablefmt="github",
-    )
-
-    code_blocks = []
-    for f in files_sorted:
-        lang = Path(f.path).suffix.lstrip(".") or ""
-        body = f.content if full else "\n".join(f.content.splitlines()[:20])
-        block = f"### `{f.path}`\n```{lang}\n{body.rstrip()}\n```\n"
-        code_blocks.append(block)
-
-    return f"{header}\n{about}\n{stats}\n{tree}\n## Files\n{table_md}\n\n" + "\n".join(
-        code_blocks
-    )
-
-
 def render_xml(summary: RepoSummary) -> str:
     """
     Generated XML contains:
@@ -603,14 +537,13 @@ def render_xml(summary: RepoSummary) -> str:
 
 @tool(
     name="repo_summarize",
-    description="Scan repository and return summary in XML or Markdown",
+    description="Scan repository and return summary in XML",
 )
 def repo_summarize(
-    output_style: Literal["xml", "markdown"] = "xml",
     force_full_update: bool = False,
 ) -> str:
     """
-    Traverse project root to generate summary and write to .tokuye/repo-summary.(xml|md).
+    Traverse project root to generate XML summary and write to .tokuye/repo-summary.xml.
     Returns path string of output file.
     """
     # Check project root
@@ -620,22 +553,14 @@ def repo_summarize(
     root: Path = settings.project_root
     summary = summarize_repo(root, force_full_update)
 
-    # Rendering
-    if output_style == "markdown":
-        content = render_markdown(summary)
-        ext = "md"
-    elif output_style == "xml":
-        content = render_xml(summary)
-        ext = "xml"
-    else:
-        raise ValueError("output_style must be 'xml' or 'markdown'")
+    content = render_xml(summary)
 
     # Prepare output directory
     out_dir = root / ".tokuye"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # Write to file
-    out_file = out_dir / f"repo-summary.{ext}"
+    out_file = out_dir / "repo-summary.xml"
     out_file.write_text(content, encoding="utf-8")
 
     # Return result
