@@ -212,5 +212,5 @@ def validate_settings():
     if settings.model_identifier == "":
         raise ValueError(
             "model_identifier must be specified. Supported models are: "
-            "Claude Sonnet 4.6, Claude Haiku 4.5, Claude Opus 4.6."
+            "Claude Sonnet 4.6, Claude Haiku 4.5, Claude Opus 4.6, Mistral Devstral 2."
         )
