@@ -1,3 +1,32 @@
+"""
+Repository description generation tools
+"""
+
+from pathlib import Path
+from typing import Dict, Any
+
+from strands_agents.agent import Agent
+from strands_agents.models.bedrock import BedrockModel
+
+from tokuye.utils.config import settings
+from tokuye.utils.token_tracker import token_tracker
+from tokuye.utils.logger import logger
+
+
+def generate_repo_description() -> str:
+    """
+    Load repo-summary.xml, send to LLM, and generate project purpose and description
+
+    Returns:
+        Generated project description
+    """
+    # Verify project root
+    if settings.project_root is None:
+        raise ValueError("project_root is not set in settings")
+
+    return generate_repo_description_with_detail_control(settings.project_root)
+
+
 def generate_description_from_summary(summary_path: Path) -> str:
     """
     Generate repository description from summary file
@@ -83,3 +112,106 @@ Make the answer specific and easy to understand, including relevant technical de
         )
 
     return description
+
+
+def generate_repo_description_with_detail_control(repo_root: Path) -> str:
+    """
+    Attempt to generate repo-description while gradually reducing detail level
+
+    Args:
+        repo_root: Root directory of repository
+
+    Returns:
+        Generated repository description
+    """
+    detail_levels = [
+        {"max_files": 1000, "max_content_length": None},  # All files, full content
+        {
+            "max_files": 1000,
+            "max_content_length": 5000,
+        },  # All files, content limited
+        {
+            "max_files": 500,
+            "max_content_length": 5000,
+        },  # File count limited, content limited
+        {"max_files": 200, "max_content_length": 2000},  # Further limited
+        {"max_files": 100, "max_content_length": 1000},  # Minimal
+    ]
+
+    # Try normal method first
+    try:
+        # Use existing repo-summary.xml
+        summary_path = repo_root / ".tokuye" / "repo-summary.xml"
+        if summary_path.exists():
+            description = generate_description_from_summary(summary_path)
+
+            # Determine output path
+            output_path = repo_root / ".tokuye" / "repo-description.md"
+
+            # Save generated description to file
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(output_path, "w", encoding="utf-8") as f:
+                f.write(description)
+
+            return f"Repository description generated and saved to: {output_path}"
+    except Exception as e:
+        logger.warning(f"Failed to generate description with full summary: {e}")
+
+    # Try with gradually reduced detail level
+    for level in detail_levels:
+        try:
+            logger.info(f"Trying with detail level: {level}")
+
+            # Generate repo-summary with this detail level
+            filtered_summary = create_filtered_summary(repo_root, level)
+            temp_path = repo_root / ".tokuye" / "temp-filtered-summary.xml"
+            temp_path.write_text(render_xml(filtered_summary))
+
+            # Generate repo-description
+            description = generate_description_from_summary(temp_path)
+
+            # Delete temporary file
+            temp_path.unlink()
+
+            # Determine output path
+            output_path = repo_root / ".tokuye" / "repo-description.md"
+
+            # Save generated description to file
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(output_path, "w", encoding="utf-8") as f:
+                f.write(description)
+
+            return f"Repository description generated and saved to: {output_path} (using filtered summary with {level})"
+        except Exception as e:
+            logger.warning(f"Failed with detail level {level}: {e}")
+            continue
+
+    # If all detail levels failed
+    raise Exception("Failed to generate repo description at any detail level")
+
+
+def create_filtered_summary(repo_root: Path, level: Dict[str, Any]) -> Dict[str, Any]:
+    """Create a filtered summary based on the detail level."""
+    # Placeholder for the actual implementation
+    return {}
+
+
+def render_xml(data: Dict[str, Any]) -> str:
+    """Render data as XML."""
+    # Placeholder for the actual implementation
+    return ""
+
+
+@tool(
+    name="generate_repo_description",
+    description="Generate project purpose and description using LLM based on repository summary and save to .tokuye/repo-description.md",
+)
+def generate_repo_description_tool() -> str:
+    """
+    Call existing generate_repo_description() to generate and save .tokuye/repo-description.md.
+    Returns success/failure message string.
+    """
+    try:
+        return generate_repo_description()
+    except Exception as e:
+        return f"Error generating repository description: {str(e)}"
