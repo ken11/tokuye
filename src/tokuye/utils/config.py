@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     bedrock_plan_model_id: str = ""
     plan_model_identifier: str = ""
     bedrock_embedding_model_id: str = "amazon.titan-embed-text-v2:0"
+    repo_description_model_id: str = ""
     model_temperature: float = 0.2
     pr_branch_prefix: str = "tokuye/"
     max_steps: int = 100
@@ -122,6 +123,7 @@ def _apply_yaml_to_settings(
     simple_keys = [
         "bedrock_model_id",
         "bedrock_embedding_model_id",
+        "repo_description_model_id",
         "bedrock_plan_model_id",
         "model_temperature",
         "pr_branch_prefix",
