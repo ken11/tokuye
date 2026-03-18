@@ -17,6 +17,14 @@ from tokuye.utils.token_tracker import token_tracker
 logger = logging.getLogger(__name__)
 
 
+def _supports_prompt_cache(model_id: str) -> bool:
+    """Return True if the model supports Bedrock prompt caching.
+
+    Currently only Anthropic (Claude) models support prompt caching on Bedrock.
+    """
+    return "anthropic" in model_id.lower()
+
+
 class MaxStepsException(Exception):
 
     def __init__(self, message: str):
@@ -51,9 +59,12 @@ class StrandsAgent:
 
         # --- Model setup -------------------------------------------------
         # The "executing" model is always the primary bedrock_model_id.
+        _exec_cache = _supports_prompt_cache(settings.bedrock_model_id)
         self.model = BedrockModel(
-            cache_prompt="default",
-            cache_tools="default",
+            **({
+                "cache_prompt": "default",
+                "cache_tools": "default",
+            } if _exec_cache else {}),
             model_id=settings.bedrock_model_id,
             temperature=settings.model_temperature,
         )
@@ -61,9 +72,12 @@ class StrandsAgent:
         # When bedrock_plan_model_id is configured, create a separate
         # "thinking" model and wire up the phase-switching tool.
         if settings.bedrock_plan_model_id:
+            _plan_cache = _supports_prompt_cache(settings.bedrock_plan_model_id)
             thinking_model = BedrockModel(
-                cache_prompt="default",
-                cache_tools="default",
+                **({
+                    "cache_prompt": "default",
+                    "cache_tools": "default",
+                } if _plan_cache else {}),
                 model_id=settings.bedrock_plan_model_id,
                 temperature=settings.model_temperature,
             )
