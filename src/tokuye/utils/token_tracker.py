@@ -27,6 +27,12 @@ MODEL_COST = {
         "input": 0.00048,
         "output": 0.0024,
     },
+    "nova-pro": {
+        "input": 0.00096,
+        "output": 0.00384,
+        "cache_write": 0.00096,  # Actual price unknown; using input price as placeholder
+        "cache_read": 0.00096,   # Actual price unknown; using input price as placeholder
+    },
 }
 
 

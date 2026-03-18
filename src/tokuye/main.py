@@ -53,6 +53,8 @@ def main(
         settings.model_identifier = "opus-4-6"
     if "devstral-2" in settings.bedrock_model_id:
         settings.model_identifier = "devstral-2"
+    if "nova-pro-v1" in settings.bedrock_model_id:
+        settings.model_identifier = "nova-pro"
 
     if settings.bedrock_plan_model_id:
         if "claude-sonnet-4-6" in settings.bedrock_plan_model_id:
@@ -63,6 +65,8 @@ def main(
             settings.plan_model_identifier = "opus-4-6"
         if "devstral-2" in settings.bedrock_plan_model_id:
             settings.plan_model_identifier = "devstral-2"
+        if "nova-pro-v1" in settings.bedrock_plan_model_id:
+            settings.plan_model_identifier = "nova-pro"
 
     validate_settings()
     token_tracker.set_cost_table()

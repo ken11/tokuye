@@ -20,9 +20,10 @@ logger = logging.getLogger(__name__)
 def _supports_prompt_cache(model_id: str) -> bool:
     """Return True if the model supports Bedrock prompt caching.
 
-    Currently only Anthropic (Claude) models support prompt caching on Bedrock.
+    Currently Anthropic (Claude) models and Amazon Nova Pro support prompt
+    caching on Bedrock.
     """
-    return "anthropic" in model_id.lower()
+    return "anthropic" in model_id.lower() or "nova-pro-v1" in model_id.lower()
 
 
 class MaxStepsException(Exception):
