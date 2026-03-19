@@ -85,3 +85,26 @@ developer_tools = [
     file_search,
     list_directory,
     copy_file,
+    move_file,
+    file_delete,
+]
+
+pr_creator_tools = [
+    submit_pull_request,
+    git_push,
+    read_lines,
+    file_search,
+    search_code_repository,
+    pr_list,
+    pr_view,
+    pr_diff,
+]
+
+reviewer_tools = [
+    pr_list,
+    pr_view,
+    pr_diff,
+    pr_get_comments,
+    pr_review_comment,
+    pr_review_submit,
+]
