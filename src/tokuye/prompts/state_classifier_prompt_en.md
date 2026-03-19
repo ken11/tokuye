@@ -25,8 +25,9 @@ You receive the current state and the user's message, and return the next state.
 - PR creation request → `PR_CREATING`
 
 ### From PLANNING
-- User signals intent to proceed with implementation ("go ahead", "implement it", "please do it", etc.) → `AWAITING_APPROVAL`
 - Investigation / question is resolved ("thanks", "got it", etc.) → `IDLE`
+- Other (follow-up questions, additional investigation, clarification, etc.) → `PLANNING`
+- Note: transition to `AWAITING_APPROVAL` after plan presentation is handled automatically by the system
 
 ### From AWAITING_APPROVAL
 - Approval / agreement ("ok", "yes", "go ahead", "approved", "please proceed", etc.) → `IMPLEMENTING`
@@ -38,7 +39,7 @@ You receive the current state and the user's message, and return the next state.
 
 ### From AWAITING_REVIEW
 - Fix / redo request ("fix this", "this isn't done", etc.) → `IMPLEMENTING`
-- Request to revisit the plan ("let's rethink the design", etc.) → `AWAITING_APPROVAL`
+- Request to revisit the plan ("let's rethink the design", etc.) → `PLANNING`
 - Self-review request ("do a self review", "review before submitting", etc.) → `SELF_REVIEWING`
 - PR creation request ("create a PR", "submit it", etc.) → `PR_CREATING`
 - Done / finished ("thanks", "this is fine", etc.) → `IDLE`

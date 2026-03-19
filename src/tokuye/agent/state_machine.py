@@ -46,6 +46,7 @@ class DevState(Enum):
 # When the current state is one of these, the classifier is skipped and the
 # state advances automatically after the node finishes.
 _AUTO_ADVANCE: dict["DevState", "DevState"] = {
+    DevState.PLANNING: DevState.AWAITING_APPROVAL,
     DevState.IMPLEMENTING: DevState.AWAITING_REVIEW,
     DevState.PR_CREATING: DevState.IDLE,
     DevState.SELF_REVIEWING: DevState.AWAITING_REVIEW,

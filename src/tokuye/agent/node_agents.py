@@ -117,13 +117,21 @@ class NodeAgents:
         pr_identifier = settings.pr_model_identifier or settings.model_identifier
         pr_model = _make_bedrock_model(pr_model_id, pr_identifier)
 
-        # --- Translation prompts (loaded once) ----------------------------
-        self._plan_to_dev_prompt = load_prompt("plan_to_developer_prompt.md")
-        self._dev_to_pr_prompt = load_prompt("developer_to_pr_creator_prompt.md")
+        # --- Translation agents: Strands Agent (no tools, stateless per call) ---
+        plan_to_dev_prompt = load_prompt("plan_to_developer_prompt.md")
+        dev_to_pr_prompt = load_prompt("developer_to_pr_creator_prompt.md")
 
-        # Translation model: primary Claude, no tools, low temperature
-        self._translation_model = _make_bedrock_model(
-            settings.bedrock_model_id, settings.model_identifier
+        self._plan_to_dev_agent = Agent(
+            model=_make_bedrock_model(settings.bedrock_model_id, settings.model_identifier),
+            system_prompt=plan_to_dev_prompt,
+            tools=[],
+            callback_handler=None,
+        )
+        self._dev_to_pr_agent = Agent(
+            model=_make_bedrock_model(settings.bedrock_model_id, settings.model_identifier),
+            system_prompt=dev_to_pr_prompt,
+            tools=[],
+            callback_handler=None,
         )
 
         # --- Planner ------------------------------------------------------
@@ -206,19 +214,12 @@ class NodeAgents:
     # Translation layer
     # ------------------------------------------------------------------
 
-    def _translate(self, system_prompt: str, content: str) -> str:
-        """Single-shot Claude call for translation/restructuring. No tools."""
-        messages = [{"role": "user", "content": content}]
+    def _translate(self, agent: Agent, content: str) -> str:
+        """Single-shot Agent call for translation/restructuring. Stateless (history cleared)."""
         try:
-            response = self._translation_model.converse(
-                system_prompt=system_prompt,
-                messages=messages,
-            )
-            raw = ""
-            for block in response.get("output", {}).get("message", {}).get("content", []):
-                if "text" in block:
-                    raw += block["text"]
-            return raw.strip()
+            agent.messages.clear()
+            result = agent(content)
+            return str(result).strip()
         except Exception as exc:
             logger.warning("Translation failed (%s); returning original content", exc)
             return content
@@ -231,12 +232,12 @@ class NodeAgents:
           ② User feedback → Developer (AWAITING_REVIEW → IMPLEMENTING)
         """
         logger.info("Translating plan/feedback for Developer")
-        return self._translate(self._plan_to_dev_prompt, plan_text)
+        return self._translate(self._plan_to_dev_agent, plan_text)
 
     def translate_developer_output_for_pr_creator(self, dev_output: str) -> str:
         """Restructure Developer output into PR context for PR Creator."""
         logger.info("Translating Developer output for PR Creator")
-        return self._translate(self._dev_to_pr_prompt, dev_output)
+        return self._translate(self._dev_to_pr_agent, dev_output)
 
     # ------------------------------------------------------------------
     # Callbacks and token tracking
