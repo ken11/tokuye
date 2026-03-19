@@ -17,23 +17,24 @@ from tokuye.utils.token_tracker import token_tracker
 logger = logging.getLogger(__name__)
 
 
-def _supports_prompt_cache(model_id: str) -> bool:
+def _supports_prompt_cache(model_identifier: str) -> bool:
     """Return True if the model supports Bedrock prompt caching.
 
-    Currently Anthropic (Claude) models and Amazon Nova Pro support prompt
-    caching on Bedrock.
+    Determined by model_identifier (the normalised internal name), not the
+    raw model_id / ARN.  Claude models and Amazon Nova Pro support prompt
+    caching; Mistral Devstral does not.
     """
-    return "anthropic" in model_id.lower() or "nova-pro-v1" in model_id.lower()
+    return model_identifier in ("sonnet-4-6", "haiku-4-5", "opus-4-6", "nova-pro")
 
 
-def _supports_tool_cache(model_id: str) -> bool:
+def _supports_tool_cache(model_identifier: str) -> bool:
     """Return True if the model supports caching tool definitions on Bedrock.
 
-    Nova models only support message-level caching; tool-level caching
-    (cachePoint in toolConfig) is not permitted and causes a ValidationException.
-    Only Anthropic (Claude) models support cache_tools.
+    Determined by model_identifier.  Nova models only support message-level
+    caching; tool-level caching (cachePoint in toolConfig) causes a
+    ValidationException.  Only Claude models support cache_tools.
     """
-    return "anthropic" in model_id.lower()
+    return model_identifier in ("sonnet-4-6", "haiku-4-5", "opus-4-6")
 
 
 class MaxStepsException(Exception):
@@ -75,8 +76,8 @@ class StrandsAgent:
 
         # --- Model setup -------------------------------------------------
         # The "executing" model is always the primary bedrock_model_id.
-        _exec_cache = _supports_prompt_cache(settings.bedrock_model_id)
-        _exec_tool_cache = _supports_tool_cache(settings.bedrock_model_id)
+        _exec_cache = _supports_prompt_cache(settings.model_identifier)
+        _exec_tool_cache = _supports_tool_cache(settings.model_identifier)
         self.model = BedrockModel(
             **({"cache_prompt": "default"} if _exec_cache else {}),
             **({"cache_tools": "default"} if _exec_tool_cache else {}),
@@ -87,8 +88,8 @@ class StrandsAgent:
         # When bedrock_plan_model_id is configured, create a separate
         # "thinking" model and wire up the phase-switching tool.
         if settings.bedrock_plan_model_id:
-            _plan_cache = _supports_prompt_cache(settings.bedrock_plan_model_id)
-            _plan_tool_cache = _supports_tool_cache(settings.bedrock_plan_model_id)
+            _plan_cache = _supports_prompt_cache(settings.plan_model_identifier)
+            _plan_tool_cache = _supports_tool_cache(settings.plan_model_identifier)
             thinking_model = BedrockModel(
                 **({"cache_prompt": "default"} if _plan_cache else {}),
                 **({"cache_tools": "default"} if _plan_tool_cache else {}),

@@ -1,6 +1,7 @@
 import logging
 import os
 import re
+import boto3
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -195,6 +196,43 @@ def load_yaml_config(settings_instance: Settings) -> Settings:  # noqa: C901
 
 
 settings = Settings()
+
+
+def _resolve_source_model_id(model_id: str) -> str:
+    """Return the underlying foundation-model ID for an application inference profile.
+
+    If *model_id* is the ARN of an application inference profile
+    (``…:application-inference-profile/<id>``), call ``GetInferenceProfile``
+    and return the ARN of the first source model so that the caller can
+    perform normal model-name matching against it.
+
+    For any other value (plain model ID, system-defined inference profile ARN,
+    cross-region profile ID, …) the input is returned unchanged.
+    """
+    if "application-inference-profile/" not in model_id:
+        return model_id
+
+    try:
+        client = boto3.client("bedrock")
+        response = client.get_inference_profile(
+            inferenceProfileIdentifier=model_id
+        )
+        models = response.get("models", [])
+        if models:
+            return models[0]["modelArn"]
+        logger.warning(
+            "GetInferenceProfile returned no models for %r; "
+            "model_identifier will not be resolved",
+            model_id,
+        )
+    except Exception as exc:
+        raise RuntimeError(
+            f"Failed to resolve application inference profile {model_id!r}. "
+            "Make sure the ARN is correct and the IAM role has "
+            "'bedrock:GetInferenceProfile' permission."
+        ) from exc
+
+    return model_id
 
 
 def validate_settings():
