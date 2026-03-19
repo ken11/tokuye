@@ -1,7 +1,19 @@
 from pathlib import Path
-from collections import defaultdict
 
 from tokuye.utils.config import settings
+
+
+class _KeepUnknown(dict):
+    """dict subclass that leaves unknown format placeholders intact.
+
+    When ``str.format_map`` encounters a key not present in the mapping it
+    calls ``__missing__``.  Returning ``"{key}"`` causes the original
+    placeholder to be preserved in the output string instead of raising
+    ``KeyError``.
+    """
+
+    def __missing__(self, key: str) -> str:
+        return "{" + key + "}"
 
 
 def load_prompt(prompt_file: str) -> str:
@@ -48,9 +60,9 @@ def load_prompt(prompt_file: str) -> str:
             optional_name_rule = ""
 
     # Replace configuration variables
-    # Use format_map with a defaultdict so unknown placeholders (e.g. JSON
+    # Use format_map with _KeepUnknown so unknown placeholders (e.g. JSON
     # examples in prompt files) are left intact instead of raising KeyError.
-    variables = defaultdict(lambda key: "{" + key + "}", {
+    variables = _KeepUnknown({
         "project_root": str(settings.project_root),
         "title": title,
         "optional_name_rule": optional_name_rule,
@@ -137,8 +149,8 @@ def load_custom_system_prompt(path: str) -> str:
             title = "# AI Development Support Agent"
             optional_name_rule = ""
 
-    # Use format_map with a defaultdict so unknown placeholders are left intact
-    variables = defaultdict(lambda: "{unknown}", {
+    # Use format_map with _KeepUnknown so unknown placeholders are left intact
+    variables = _KeepUnknown({
         "project_root": str(settings.project_root),
         "title": title,
         "optional_name_rule": optional_name_rule,
