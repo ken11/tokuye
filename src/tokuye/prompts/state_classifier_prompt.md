@@ -66,7 +66,7 @@
 次のステートのみをJSON形式で返してください。説明は不要です。
 
 ```json
-{"next_state": "STATE_NAME"}
+{{"next_state": "STATE_NAME"}}
 ```
 
 STATE_NAME は上記のステート定義のいずれかです。
