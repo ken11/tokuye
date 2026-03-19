@@ -25,8 +25,9 @@
 - PR作成依頼 → `PR_CREATING`
 
 ### PLANNING からの遷移
-- 実装・開発を進める意思表示（「進めて」「実装して」「お願い」等） → `AWAITING_APPROVAL`
 - 調査・質問が完結した（「ありがとう」「わかった」等） → `IDLE`
+- その他（追加質問・調査依頼・補足等） → `PLANNING`
+- ※ 計画提示後の `AWAITING_APPROVAL` への遷移はシステムが自動で行う
 
 ### AWAITING_APPROVAL からの遷移
 - 承認・同意（「ok」「いいよ」「進めて」「承認」「よろしく」等） → `IMPLEMENTING`

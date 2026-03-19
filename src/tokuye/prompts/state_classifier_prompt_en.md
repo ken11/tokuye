@@ -25,8 +25,9 @@ You receive the current state and the user's message, and return the next state.
 - PR creation request → `PR_CREATING`
 
 ### From PLANNING
-- User signals intent to proceed with implementation ("go ahead", "implement it", "please do it", etc.) → `AWAITING_APPROVAL`
 - Investigation / question is resolved ("thanks", "got it", etc.) → `IDLE`
+- Other (follow-up questions, additional investigation, clarification, etc.) → `PLANNING`
+- Note: transition to `AWAITING_APPROVAL` after plan presentation is handled automatically by the system
 
 ### From AWAITING_APPROVAL
 - Approval / agreement ("ok", "yes", "go ahead", "approved", "please proceed", etc.) → `IMPLEMENTING`

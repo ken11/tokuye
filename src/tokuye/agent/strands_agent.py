@@ -227,6 +227,8 @@ class StrandsAgent:
             result = await nodes.invoke_planner(message)
             # Capture Planner output for downstream nodes
             self._last_planner_output = str(result)
+            sm.transition_after_node()  # PLANNING → AWAITING_APPROVAL
+            self.add_system_message(f"[State: {sm.state.value}]")
 
         elif next_state == DevState.AWAITING_APPROVAL:
             # Planner has already presented the plan; just wait for user approval.
