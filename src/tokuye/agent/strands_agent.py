@@ -251,6 +251,10 @@ class StrandsAgent:
                 self._last_developer_output = ""  # consumed
                 sm.transition_after_node()
                 self.add_system_message(f"[State: {sm.state.value}]")
+            elif next_state == DevState.SELF_REVIEWING:
+                # Auto-advance to AWAITING_REVIEW so user can decide next step
+                sm.transition_after_node()
+                self.add_system_message(f"[State: {sm.state.value}]")
 
         elif next_state in (DevState.REVIEWING, DevState.AWAITING_REVIEW_APPROVAL):
             result = await nodes.invoke_reviewer(message)
