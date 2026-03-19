@@ -48,11 +48,14 @@ def load_prompt(prompt_file: str) -> str:
             optional_name_rule = ""
 
     # Replace configuration variables
-    prompt = prompt.format(
-        project_root=settings.project_root,
-        title=title,
-        optional_name_rule=optional_name_rule,
-    )
+    # Use format_map with a defaultdict so unknown placeholders (e.g. JSON
+    # examples in prompt files) are left intact instead of raising KeyError.
+    variables = defaultdict(lambda key: "{" + key + "}", {
+        "project_root": str(settings.project_root),
+        "title": title,
+        "optional_name_rule": optional_name_rule,
+    })
+    prompt = prompt.format_map(variables)
 
     return prompt
 
