@@ -13,6 +13,7 @@ import json
 import logging
 from enum import Enum
 
+from strands import Agent
 from strands.models import BedrockModel
 
 from tokuye.prompts.prompt_loader import load_prompt
@@ -60,11 +61,16 @@ class StateClassifier:
     """
 
     def __init__(self, model: BedrockModel) -> None:
-        self._model = model
         if settings.language == "en":
             self._prompt = load_prompt("state_classifier_prompt_en.md")
         else:
             self._prompt = load_prompt("state_classifier_prompt.md")
+        self._agent = Agent(
+            model=model,
+            system_prompt=self._prompt,
+            tools=[],
+            callback_handler=None,
+        )
 
     def classify(self, current_state: DevState, user_message: str) -> DevState:
         """Return the next state synchronously."""
@@ -78,17 +84,11 @@ class StateClassifier:
                 f"現在のステート: {current_state.value}\n"
                 f"ユーザーの発言: {user_message}"
             )
-        messages = [{"role": "user", "content": user_content}]
         try:
-            response = self._model.converse(
-                system_prompt=self._prompt,
-                messages=messages,
-            )
-            # Extract text from the response
-            raw = ""
-            for block in response.get("output", {}).get("message", {}).get("content", []):
-                if "text" in block:
-                    raw += block["text"]
+            # Reset history to keep each classification stateless
+            self._agent.messages.clear()
+            result = self._agent(user_content)
+            raw = str(result)
 
             # Parse JSON
             # Strip markdown code fences if present
