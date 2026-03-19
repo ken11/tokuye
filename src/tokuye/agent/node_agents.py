@@ -127,7 +127,10 @@ class NodeAgents:
         )
 
         # --- Planner ------------------------------------------------------
-        planner_prompt = load_prompt("system_prompt_planner.md")
+        if settings.language == "en":
+            planner_prompt = load_prompt("system_prompt_planner_en.md")
+        else:
+            planner_prompt = load_prompt("system_prompt_planner.md")
         self.planner = Agent(
             model=primary_model,
             tools=list(planner_tools) + mcp_tools,
@@ -157,7 +160,10 @@ class NodeAgents:
         )
 
         # --- PR Creator ---------------------------------------------------
-        pr_creator_prompt = load_prompt("system_prompt_pr_creator.md")
+        if settings.language == "en":
+            pr_creator_prompt = load_prompt("system_prompt_pr_creator_en.md")
+        else:
+            pr_creator_prompt = load_prompt("system_prompt_pr_creator.md")
         self.pr_creator = Agent(
             model=pr_model,
             tools=list(pr_creator_tools) + mcp_tools,
@@ -172,7 +178,10 @@ class NodeAgents:
         )
 
         # --- Reviewer -----------------------------------------------------
-        reviewer_prompt = load_prompt("system_prompt_reviewer.md")
+        if settings.language == "en":
+            reviewer_prompt = load_prompt("system_prompt_reviewer_en.md")
+        else:
+            reviewer_prompt = load_prompt("system_prompt_reviewer.md")
         self.reviewer = Agent(
             model=primary_model,
             tools=list(reviewer_tools) + mcp_tools,
