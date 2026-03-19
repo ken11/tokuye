@@ -223,10 +223,15 @@ class StrandsAgent:
         if next_state == DevState.IDLE:
             return None
 
-        elif next_state in (DevState.PLANNING, DevState.AWAITING_APPROVAL):
+        elif next_state == DevState.PLANNING:
             result = await nodes.invoke_planner(message)
             # Capture Planner output for downstream nodes
             self._last_planner_output = str(result)
+
+        elif next_state == DevState.AWAITING_APPROVAL:
+            # Planner has already presented the plan; just wait for user approval.
+            # No node invocation needed.
+            result = None
 
         elif next_state == DevState.IMPLEMENTING:
             # Prefer Planner output as the source of truth.

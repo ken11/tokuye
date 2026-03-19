@@ -38,7 +38,7 @@
 
 ### AWAITING_REVIEW からの遷移
 - 修正・やり直し依頼（「ここ直して」「これできてない」等） → `IMPLEMENTING`
-- 計画から見直し依頼（「やっぱり設計から」等） → `AWAITING_APPROVAL`
+- 計画から見直し依頼（「やっぱり設計から」等） → `PLANNING`
 - 自己レビュー依頼（「self reviewして」「レビューしてから出して」等） → `SELF_REVIEWING`
 - PR作成依頼（「PR作って」「出して」等） → `PR_CREATING`
 - 完結・終了（「ありがとう」「これでいい」等） → `IDLE`
