@@ -56,3 +56,55 @@ all_tools = [
     issue_get_comments,
     report_phase,
 ]
+
+# ---------------------------------------------------------------------------
+# Node-specific tool sets for state machine mode (v2)
+# Each node only receives the tools it actually needs, reducing input token
+# overhead and preventing unintended tool calls.
+# ---------------------------------------------------------------------------
+
+planner_tools = [
+    repo_summarize,
+    generate_repo_description_tool,
+    manage_code_index,
+    search_code_repository,
+    read_lines,
+    file_search,
+    list_directory,
+    issue_list,
+    issue_view,
+    issue_get_comments,
+]
+
+developer_tools = [
+    read_lines,
+    write_file,
+    apply_patch,
+    create_branch,
+    commit_changes,
+    file_search,
+    list_directory,
+    copy_file,
+    move_file,
+    file_delete,
+]
+
+pr_creator_tools = [
+    submit_pull_request,
+    git_push,
+    read_lines,
+    file_search,
+    search_code_repository,
+    pr_list,
+    pr_view,
+    pr_diff,
+]
+
+reviewer_tools = [
+    pr_list,
+    pr_view,
+    pr_diff,
+    pr_get_comments,
+    pr_review_comment,
+    pr_review_submit,
+]

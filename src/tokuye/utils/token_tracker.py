@@ -69,6 +69,18 @@ class TokenUsageTracker:
             self.plan_cost_table = MODEL_COST[settings.plan_model_identifier]
         else:
             self.plan_cost_table = None
+        if settings.impl_model_identifier and settings.impl_model_identifier in MODEL_COST:
+            self.impl_cost_table = MODEL_COST[settings.impl_model_identifier]
+        else:
+            self.impl_cost_table = None
+        if settings.classifier_model_identifier and settings.classifier_model_identifier in MODEL_COST:
+            self.classifier_cost_table = MODEL_COST[settings.classifier_model_identifier]
+        else:
+            self.classifier_cost_table = None
+        if settings.pr_model_identifier and settings.pr_model_identifier in MODEL_COST:
+            self.pr_cost_table = MODEL_COST[settings.pr_model_identifier]
+        else:
+            self.pr_cost_table = None
 
     def _create_empty_usage_dict(self) -> Dict[str, int]:
         """Create empty token usage dictionary"""
@@ -100,6 +112,15 @@ class TokenUsageTracker:
         if model_identifier and self.plan_cost_table is not None:
             if model_identifier == settings.plan_model_identifier:
                 return self.plan_cost_table
+        if model_identifier and self.impl_cost_table is not None:
+            if model_identifier == settings.impl_model_identifier:
+                return self.impl_cost_table
+        if model_identifier and self.classifier_cost_table is not None:
+            if model_identifier == settings.classifier_model_identifier:
+                return self.classifier_cost_table
+        if model_identifier and self.pr_cost_table is not None:
+            if model_identifier == settings.pr_model_identifier:
+                return self.pr_cost_table
         return self.cost_table
 
     def add_usage(self, usage: Dict, model_identifier: Optional[str] = None):

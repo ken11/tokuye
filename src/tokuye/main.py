@@ -70,6 +70,35 @@ def main(
         if "nova-pro-v1" in _plan_source:
             settings.plan_model_identifier = "nova-pro"
 
+    def _resolve_identifier(model_id: str) -> str:
+        source = _resolve_source_model_id(model_id)
+        if "claude-sonnet-4-6" in source:
+            return "sonnet-4-6"
+        if "claude-haiku-4-5-" in source:
+            return "haiku-4-5"
+        if "claude-opus-4-6-" in source:
+            return "opus-4-6"
+        if "devstral-2" in source:
+            return "devstral-2"
+        if "nova-pro-v1" in source:
+            return "nova-pro"
+        return ""
+
+    if settings.bedrock_impl_model_id:
+        settings.impl_model_identifier = _resolve_identifier(settings.bedrock_impl_model_id)
+    else:
+        settings.impl_model_identifier = settings.model_identifier
+
+    if settings.bedrock_classifier_model_id:
+        settings.classifier_model_identifier = _resolve_identifier(settings.bedrock_classifier_model_id)
+    else:
+        settings.classifier_model_identifier = settings.model_identifier
+
+    if settings.bedrock_pr_model_id:
+        settings.pr_model_identifier = _resolve_identifier(settings.bedrock_pr_model_id)
+    else:
+        settings.pr_model_identifier = settings.model_identifier
+
     validate_settings()
     token_tracker.set_cost_table()
 

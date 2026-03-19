@@ -11,6 +11,8 @@ from tokuye.prompts.prompt_loader import load_custom_system_prompt, load_prompt,
 from tokuye.mcp import MCPClientManager
 from tokuye.tools.strands_tools import all_tools
 from tokuye.tools.strands_tools.phase_tool import configure_phase_models
+from tokuye.agent.state_machine import DevState, StateClassifier, StateMachine
+from tokuye.agent.node_agents import NodeAgents
 from tokuye.utils.config import settings
 from tokuye.utils.token_tracker import token_tracker
 
@@ -144,15 +146,130 @@ class StrandsAgent:
         self.step_count = 0
         self._cleaned_up = False
 
+        # --- v2: state machine mode --------------------------------------
+        if settings.state_machine_mode:
+            classifier_model_id = (
+                settings.bedrock_classifier_model_id or settings.bedrock_model_id
+            )
+            classifier_identifier = (
+                settings.classifier_model_identifier or settings.model_identifier
+            )
+            _cls_cache = _supports_prompt_cache(classifier_identifier)
+            classifier_model = BedrockModel(
+                **({"cache_prompt": "default"} if _cls_cache else {}),
+                model_id=classifier_model_id,
+                temperature=0.0,  # deterministic classification
+            )
+            self._state_classifier = StateClassifier(classifier_model)
+            self._state_machine = StateMachine(self._state_classifier)
+            self._node_agents = NodeAgents(
+                thread_id=thread_id,
+                add_ai_message=add_ai_message,
+                add_system_message=add_system_message,
+                set_thinking=set_thinking,
+                update_token_usage=update_token_usage,
+                mcp_manager=self.mcp_manager,
+            )
+            logger.info(
+                "State machine mode enabled: classifier=%s, impl=%s",
+                classifier_model_id,
+                settings.bedrock_impl_model_id or settings.bedrock_model_id,
+            )
+        else:
+            self._state_machine = None
+            self._node_agents = None
+
+        # Buffers to carry outputs between nodes (v2 only)
+        self._last_planner_output: str = ""
+        self._last_developer_output: str = ""
+
     async def __call__(self, *args, **kwargs):
-        token_tracker.reset_turn()
         self.set_thinking(True)
         try:
-            result = await self.agent.invoke_async(*args, **kwargs)
-            self._update_token_usage(result)
-            return result
+            if settings.state_machine_mode:
+                return await self._call_v2(*args, **kwargs)
+            else:
+                return await self._call_v1(*args, **kwargs)
         finally:
             self.set_thinking(False)
+
+    async def _call_v1(self, *args, **kwargs):
+        """Original single-agent flow (v1)."""
+        token_tracker.reset_turn()
+        result = await self.agent.invoke_async(*args, **kwargs)
+        self._update_token_usage(result)
+        return result
+
+    async def _call_v2(self, message: str = None, **kwargs):
+        """State machine flow (v2).
+
+        1. Classify user message → determine next state
+        2. Invoke the appropriate node agent
+        3. Auto-advance state after node completes (if applicable)
+        """
+        sm = self._state_machine
+        nodes = self._node_agents
+
+        # --- Determine next state ----------------------------------------
+        if message is not None:
+            next_state = sm.transition_by_user(message)
+        else:
+            next_state = sm.state
+
+        self.add_system_message(f"[State: {next_state.value}]")
+        logger.info("v2 dispatch: state=%s", next_state.value)
+
+        # --- Dispatch to node --------------------------------------------
+        if next_state == DevState.IDLE:
+            return None
+
+        elif next_state in (DevState.PLANNING, DevState.AWAITING_APPROVAL):
+            result = await nodes.invoke_planner(message)
+            # Capture Planner output for downstream nodes
+            self._last_planner_output = str(result)
+
+        elif next_state == DevState.IMPLEMENTING:
+            # Prefer Planner output as the source of truth.
+            # Fall back to user message when re-implementing from AWAITING_REVIEW.
+            source = self._last_planner_output if self._last_planner_output else message
+            result = await nodes.invoke_developer(source)
+            self._last_developer_output = str(result)
+            self._last_planner_output = ""  # consumed
+            sm.transition_after_node()
+            self.add_system_message(f"[State: {sm.state.value}]")
+
+        elif next_state in (DevState.PR_CREATING, DevState.SELF_REVIEWING):
+            # PR Creator receives Developer output (structured by translation layer).
+            # For SELF_REVIEWING triggered directly by user, use user message.
+            source = (
+                self._last_developer_output
+                if next_state == DevState.PR_CREATING and self._last_developer_output
+                else message
+            )
+            result = await nodes.invoke_pr_creator(source)
+            if next_state == DevState.PR_CREATING:
+                self._last_developer_output = ""  # consumed
+                sm.transition_after_node()
+                self.add_system_message(f"[State: {sm.state.value}]")
+            elif next_state == DevState.SELF_REVIEWING:
+                # Auto-advance to AWAITING_REVIEW so user can decide next step
+                sm.transition_after_node()
+                self.add_system_message(f"[State: {sm.state.value}]")
+
+        elif next_state in (DevState.REVIEWING, DevState.AWAITING_REVIEW_APPROVAL):
+            result = await nodes.invoke_reviewer(message)
+            if next_state == DevState.REVIEWING:
+                sm.transition_after_node()
+                self.add_system_message(f"[State: {sm.state.value}]")
+
+        elif next_state == DevState.AWAITING_REVIEW:
+            result = None
+
+        else:
+            logger.warning("v2: unhandled state %s, falling back to planner", next_state.value)
+            result = await nodes.invoke_planner(message)
+
+        return result
 
     def _callback_handler(self, **kwargs):
         if "event" in kwargs and kwargs["event"].get("messageStop") is not None:
