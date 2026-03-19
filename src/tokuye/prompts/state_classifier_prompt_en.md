@@ -66,7 +66,7 @@ You receive the current state and the user's message, and return the next state.
 Return only the next state as JSON. No explanation needed.
 
 ```json
-{"next_state": "STATE_NAME"}
+{{"next_state": "STATE_NAME"}}
 ```
 
 STATE_NAME must be one of the states defined above.
