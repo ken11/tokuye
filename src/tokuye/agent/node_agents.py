@@ -11,10 +11,20 @@ Planner     – Claude (bedrock_model_id)
               Investigates the project and produces an implementation plan.
 Developer   – Devstral (bedrock_impl_model_id, falls back to bedrock_model_id)
               Implements the plan; no investigation tools.
-PR Creator  – Claude (bedrock_model_id)
+PR Creator  – Nova Pro (bedrock_pr_model_id, falls back to bedrock_model_id)
               Creates PRs and performs self-review.
 Reviewer    – Claude (bedrock_model_id)
               Reviews other people's PRs; posts comments only after approval.
+
+Translation layer
+-----------------
+Between Planner→Developer and Developer→PR Creator, a lightweight Claude call
+(no tools) translates/restructures the output so each node receives exactly
+the information it needs in the right language.
+
+  ① plan_to_developer   : Japanese plan → English structured instructions for Devstral
+  ② feedback_to_developer: Japanese user feedback → English correction instructions for Devstral
+  ③ developer_to_pr_creator: Developer report → PR context for PR Creator
 """
 
 import logging
@@ -102,6 +112,20 @@ class NodeAgents:
         impl_identifier = settings.impl_model_identifier or settings.model_identifier
         impl_model = _make_bedrock_model(impl_model_id, impl_identifier)
 
+        # --- PR Creator model (Nova Pro or fallback) ----------------------
+        pr_model_id = settings.bedrock_pr_model_id or settings.bedrock_model_id
+        pr_identifier = settings.pr_model_identifier or settings.model_identifier
+        pr_model = _make_bedrock_model(pr_model_id, pr_identifier)
+
+        # --- Translation prompts (loaded once) ----------------------------
+        self._plan_to_dev_prompt = load_prompt("plan_to_developer_prompt.md")
+        self._dev_to_pr_prompt = load_prompt("developer_to_pr_creator_prompt.md")
+
+        # Translation model: primary Claude, no tools, low temperature
+        self._translation_model = _make_bedrock_model(
+            settings.bedrock_model_id, settings.model_identifier
+        )
+
         # --- Planner ------------------------------------------------------
         planner_prompt = load_prompt("system_prompt_planner.md")
         self.planner = Agent(
@@ -135,7 +159,7 @@ class NodeAgents:
         # --- PR Creator ---------------------------------------------------
         pr_creator_prompt = load_prompt("system_prompt_pr_creator.md")
         self.pr_creator = Agent(
-            model=primary_model,
+            model=pr_model,
             tools=list(pr_creator_tools) + mcp_tools,
             system_prompt=pr_creator_prompt,
             session_manager=FileSessionManager(
@@ -163,10 +187,51 @@ class NodeAgents:
         )
 
         logger.info(
-            "NodeAgents initialised: primary=%s, impl=%s",
+            "NodeAgents initialised: primary=%s, impl=%s, pr=%s",
             settings.bedrock_model_id,
             impl_model_id,
+            pr_model_id,
         )
+
+    # ------------------------------------------------------------------
+    # Translation layer
+    # ------------------------------------------------------------------
+
+    def _translate(self, system_prompt: str, content: str) -> str:
+        """Single-shot Claude call for translation/restructuring. No tools."""
+        messages = [{"role": "user", "content": content}]
+        try:
+            response = self._translation_model.converse(
+                system_prompt=system_prompt,
+                messages=messages,
+            )
+            raw = ""
+            for block in response.get("output", {}).get("message", {}).get("content", []):
+                if "text" in block:
+                    raw += block["text"]
+            return raw.strip()
+        except Exception as exc:
+            logger.warning("Translation failed (%s); returning original content", exc)
+            return content
+
+    def translate_plan_for_developer(self, plan_text: str) -> str:
+        """Convert Planner output (possibly Japanese) to English instructions for Devstral.
+
+        Used for both:
+          ① Initial plan → Developer (AWAITING_APPROVAL → IMPLEMENTING)
+          ② User feedback → Developer (AWAITING_REVIEW → IMPLEMENTING)
+        """
+        logger.info("Translating plan/feedback for Developer")
+        return self._translate(self._plan_to_dev_prompt, plan_text)
+
+    def translate_developer_output_for_pr_creator(self, dev_output: str) -> str:
+        """Restructure Developer output into PR context for PR Creator."""
+        logger.info("Translating Developer output for PR Creator")
+        return self._translate(self._dev_to_pr_prompt, dev_output)
+
+    # ------------------------------------------------------------------
+    # Callbacks and token tracking
+    # ------------------------------------------------------------------
 
     def _make_callback(self, node_name: str):
         """Return a callback_handler closure for the given node."""
@@ -186,6 +251,10 @@ class NodeAgents:
         token_tracker.add_usage(latest.usage, model_identifier=model_identifier)
         self.update_token_usage(token_tracker.format_usage_summary())
 
+    # ------------------------------------------------------------------
+    # Node invocations
+    # ------------------------------------------------------------------
+
     async def invoke_planner(self, message: str):
         token_tracker.reset_turn()
         result = await self.planner.invoke_async(message)
@@ -193,16 +262,23 @@ class NodeAgents:
         return result
 
     async def invoke_developer(self, message: str):
+        """Translate message first, then invoke Developer."""
+        translated = self.translate_plan_for_developer(message)
+        self.add_system_message("[Translated instructions sent to Developer]")
         token_tracker.reset_turn()
         impl_identifier = settings.impl_model_identifier or settings.model_identifier
-        result = await self.developer.invoke_async(message)
+        result = await self.developer.invoke_async(translated)
         self._update_token_usage(result, model_identifier=impl_identifier)
         return result
 
     async def invoke_pr_creator(self, message: str):
+        """Translate Developer output first, then invoke PR Creator."""
+        translated = self.translate_developer_output_for_pr_creator(message)
+        self.add_system_message("[Developer output structured for PR Creator]")
         token_tracker.reset_turn()
-        result = await self.pr_creator.invoke_async(message)
-        self._update_token_usage(result, model_identifier=settings.model_identifier)
+        pr_identifier = settings.pr_model_identifier or settings.model_identifier
+        result = await self.pr_creator.invoke_async(translated)
+        self._update_token_usage(result, model_identifier=pr_identifier)
         return result
 
     async def invoke_reviewer(self, message: str):

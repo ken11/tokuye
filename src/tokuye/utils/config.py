@@ -46,6 +46,8 @@ class Settings(BaseSettings):
     impl_model_identifier: str = ""
     bedrock_classifier_model_id: str = ""  # State Classifier node; falls back to bedrock_model_id
     classifier_model_identifier: str = ""
+    bedrock_pr_model_id: str = ""          # PR Creator node; falls back to bedrock_model_id
+    pr_model_identifier: str = ""
 
     model_temperature: float = 0.2
     pr_branch_prefix: str = "tokuye/"
@@ -135,6 +137,7 @@ def _apply_yaml_to_settings(
         "state_machine_mode",
         "bedrock_impl_model_id",
         "bedrock_classifier_model_id",
+        "bedrock_pr_model_id",
         "model_temperature",
         "pr_branch_prefix",
         "strands_session_dir",

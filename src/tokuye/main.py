@@ -94,6 +94,11 @@ def main(
     else:
         settings.classifier_model_identifier = settings.model_identifier
 
+    if settings.bedrock_pr_model_id:
+        settings.pr_model_identifier = _resolve_identifier(settings.bedrock_pr_model_id)
+    else:
+        settings.pr_model_identifier = settings.model_identifier
+
     validate_settings()
     token_tracker.set_cost_table()
 

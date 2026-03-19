@@ -179,6 +179,10 @@ class StrandsAgent:
             self._state_machine = None
             self._node_agents = None
 
+        # Buffers to carry outputs between nodes (v2 only)
+        self._last_planner_output: str = ""
+        self._last_developer_output: str = ""
+
     async def __call__(self, *args, **kwargs):
         self.set_thinking(True)
         try:
@@ -206,7 +210,7 @@ class StrandsAgent:
         sm = self._state_machine
         nodes = self._node_agents
 
-        # Determine next state from user message
+        # --- Determine next state ----------------------------------------
         if message is not None:
             next_state = sm.transition_by_user(message)
         else:
@@ -215,21 +219,36 @@ class StrandsAgent:
         self.add_system_message(f"[State: {next_state.value}]")
         logger.info("v2 dispatch: state=%s", next_state.value)
 
+        # --- Dispatch to node --------------------------------------------
         if next_state == DevState.IDLE:
-            # Nothing to do; just acknowledge
             return None
 
         elif next_state in (DevState.PLANNING, DevState.AWAITING_APPROVAL):
             result = await nodes.invoke_planner(message)
+            # Capture Planner output for downstream nodes
+            self._last_planner_output = str(result)
 
         elif next_state == DevState.IMPLEMENTING:
-            result = await nodes.invoke_developer(message)
+            # Prefer Planner output as the source of truth.
+            # Fall back to user message when re-implementing from AWAITING_REVIEW.
+            source = self._last_planner_output if self._last_planner_output else message
+            result = await nodes.invoke_developer(source)
+            self._last_developer_output = str(result)
+            self._last_planner_output = ""  # consumed
             sm.transition_after_node()
             self.add_system_message(f"[State: {sm.state.value}]")
 
         elif next_state in (DevState.PR_CREATING, DevState.SELF_REVIEWING):
-            result = await nodes.invoke_pr_creator(message)
+            # PR Creator receives Developer output (structured by translation layer).
+            # For SELF_REVIEWING triggered directly by user, use user message.
+            source = (
+                self._last_developer_output
+                if next_state == DevState.PR_CREATING and self._last_developer_output
+                else message
+            )
+            result = await nodes.invoke_pr_creator(source)
             if next_state == DevState.PR_CREATING:
+                self._last_developer_output = ""  # consumed
                 sm.transition_after_node()
                 self.add_system_message(f"[State: {sm.state.value}]")
 
@@ -240,7 +259,6 @@ class StrandsAgent:
                 self.add_system_message(f"[State: {sm.state.value}]")
 
         elif next_state == DevState.AWAITING_REVIEW:
-            # Waiting for user input; no node to invoke
             result = None
 
         else:
