@@ -39,6 +39,14 @@ class Settings(BaseSettings):
     bedrock_plan_model_id: str = ""
     plan_model_identifier: str = ""
     bedrock_embedding_model_id: str = "amazon.titan-embed-text-v2:0"
+
+    # --- State machine mode (v2) -----------------------------------------
+    state_machine_mode: bool = False
+    bedrock_impl_model_id: str = ""        # Developer node; falls back to bedrock_model_id
+    impl_model_identifier: str = ""
+    bedrock_classifier_model_id: str = ""  # State Classifier node; falls back to bedrock_model_id
+    classifier_model_identifier: str = ""
+
     model_temperature: float = 0.2
     pr_branch_prefix: str = "tokuye/"
     max_steps: int = 100
@@ -124,6 +132,9 @@ def _apply_yaml_to_settings(
         "bedrock_model_id",
         "bedrock_embedding_model_id",
         "bedrock_plan_model_id",
+        "state_machine_mode",
+        "bedrock_impl_model_id",
+        "bedrock_classifier_model_id",
         "model_temperature",
         "pr_branch_prefix",
         "strands_session_dir",
