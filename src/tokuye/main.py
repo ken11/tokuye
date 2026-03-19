@@ -7,7 +7,7 @@ from pathlib import Path
 import typer
 
 from tokuye.textual.base_interface import ChatInterface
-from tokuye.utils.config import load_yaml_config, settings, validate_settings
+from tokuye.utils.config import load_yaml_config, settings, validate_settings, _resolve_source_model_id
 from tokuye.utils.token_tracker import token_tracker
 
 os.environ["BYPASS_TOOL_CONSENT"] = "true"
@@ -45,27 +45,29 @@ def main(
     settings.language = language
     load_yaml_config(settings)
 
-    if "claude-sonnet-4-6" in settings.bedrock_model_id:
+    _exec_source = _resolve_source_model_id(settings.bedrock_model_id)
+    if "claude-sonnet-4-6" in _exec_source:
         settings.model_identifier = "sonnet-4-6"
-    if "claude-haiku-4-5-" in settings.bedrock_model_id:
+    if "claude-haiku-4-5-" in _exec_source:
         settings.model_identifier = "haiku-4-5"
-    if "claude-opus-4-6-" in settings.bedrock_model_id:
+    if "claude-opus-4-6-" in _exec_source:
         settings.model_identifier = "opus-4-6"
-    if "devstral-2" in settings.bedrock_model_id:
+    if "devstral-2" in _exec_source:
         settings.model_identifier = "devstral-2"
-    if "nova-pro-v1" in settings.bedrock_model_id:
+    if "nova-pro-v1" in _exec_source:
         settings.model_identifier = "nova-pro"
 
     if settings.bedrock_plan_model_id:
-        if "claude-sonnet-4-6" in settings.bedrock_plan_model_id:
+        _plan_source = _resolve_source_model_id(settings.bedrock_plan_model_id)
+        if "claude-sonnet-4-6" in _plan_source:
             settings.plan_model_identifier = "sonnet-4-6"
-        if "claude-haiku-4-5-" in settings.bedrock_plan_model_id:
+        if "claude-haiku-4-5-" in _plan_source:
             settings.plan_model_identifier = "haiku-4-5"
-        if "claude-opus-4-6-" in settings.bedrock_plan_model_id:
+        if "claude-opus-4-6-" in _plan_source:
             settings.plan_model_identifier = "opus-4-6"
-        if "devstral-2" in settings.bedrock_plan_model_id:
+        if "devstral-2" in _plan_source:
             settings.plan_model_identifier = "devstral-2"
-        if "nova-pro-v1" in settings.bedrock_plan_model_id:
+        if "nova-pro-v1" in _plan_source:
             settings.plan_model_identifier = "nova-pro"
 
     validate_settings()
