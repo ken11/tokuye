@@ -119,7 +119,10 @@ class NodeAgents:
 
         # --- Translation agents: Strands Agent (no tools, stateless per call) ---
         plan_to_dev_prompt = load_prompt("plan_to_developer_prompt.md")
-        dev_to_pr_prompt = load_prompt("developer_to_pr_creator_prompt.md")
+        if settings.language == "ja":
+            dev_to_pr_prompt = load_prompt("developer_to_pr_creator_prompt_ja.md")
+        else:
+            dev_to_pr_prompt = load_prompt("developer_to_pr_creator_prompt.md")
 
         self._plan_to_dev_agent = Agent(
             model=_make_bedrock_model(settings.bedrock_model_id, settings.model_identifier),
