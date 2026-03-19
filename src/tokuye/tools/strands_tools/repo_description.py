@@ -161,8 +161,9 @@ def generate_description_from_summary(summary_path: Path) -> str:
     with open(summary_path, "r", encoding="utf-8") as f:
         repo_summary = f.read()
 
+    repo_desc_model_id = settings.bedrock_repo_description_model_id or settings.bedrock_model_id
     model = BedrockModel(
-        model_id=settings.bedrock_model_id,
+        model_id=repo_desc_model_id,
         temperature=settings.model_temperature,
         streaming=False,
     )
