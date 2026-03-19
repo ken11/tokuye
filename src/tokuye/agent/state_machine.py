@@ -16,6 +16,7 @@ from enum import Enum
 from strands.models import BedrockModel
 
 from tokuye.prompts.prompt_loader import load_prompt
+from tokuye.utils.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -60,14 +61,23 @@ class StateClassifier:
 
     def __init__(self, model: BedrockModel) -> None:
         self._model = model
-        self._prompt = load_prompt("state_classifier_prompt.md")
+        if settings.language == "en":
+            self._prompt = load_prompt("state_classifier_prompt_en.md")
+        else:
+            self._prompt = load_prompt("state_classifier_prompt.md")
 
     def classify(self, current_state: DevState, user_message: str) -> DevState:
         """Return the next state synchronously."""
-        user_content = (
-            f"現在のステート: {current_state.value}\n"
-            f"ユーザーの発言: {user_message}"
-        )
+        if settings.language == "en":
+            user_content = (
+                f"Current state: {current_state.value}\n"
+                f"User message: {user_message}"
+            )
+        else:
+            user_content = (
+                f"現在のステート: {current_state.value}\n"
+                f"ユーザーの発言: {user_message}"
+            )
         messages = [{"role": "user", "content": user_content}]
         try:
             response = self._model.converse(
