@@ -252,7 +252,7 @@ class NodeAgents:
         def _handler(**kwargs):
             if "message" in kwargs and kwargs["message"].get("role") == "assistant":
                 for c in kwargs["message"].get("content", []):
-                    if c.get("text"):
+                    if c.get("text", "").strip():
                         self.add_ai_message(c["text"])
 
         return _handler
