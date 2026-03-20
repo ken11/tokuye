@@ -52,6 +52,11 @@ def _sanitize_patch(diff: str) -> str:
        (e.g. ``abcdefg``).  Such lines are removed entirely; ``git apply``
        does not require them.
 
+       Only lines in the per-file header region (between ``diff --git``
+       and the first ``@@`` of each file) are examined.  This prevents
+       false-positive removal of hunk-body lines that happen to match the
+       ``index X..Y`` pattern (e.g. content in Markdown or config files).
+
     2. **Incorrect hunk-header line counts** – The ``@@ -a,b +c,d @@``
        header must declare the exact number of old-side (``b``) and
        new-side (``d``) lines present in the hunk body.  Devstral
@@ -66,10 +71,14 @@ def _sanitize_patch(diff: str) -> str:
     # ------------------------------------------------------------------ #
     # Pass 1: strip invalid ``index`` lines                               #
     # ------------------------------------------------------------------ #
-    # Match any "index X..Y" line regardless of what X/Y contain, then
-    # validate the OIDs separately.  Using \S+ instead of [0-9a-fA-F.]+
-    # ensures we catch lines where the OID already contains non-hex chars
-    # (e.g. "abcdefg") that would otherwise fail to match and slip through.
+    # ``index`` metadata lines only appear in the per-file header region,
+    # i.e. after a ``diff --git`` line and before the first ``@@`` hunk
+    # header of that file.  We track this region with ``in_file_header``
+    # so that hunk-body content is never inspected.
+    #
+    # _INDEX_RE uses \S+ (not [0-9a-fA-F.]+) so that OIDs containing
+    # non-hex characters (e.g. "abcdefg") are still captured and then
+    # rejected by _valid_oid().
     _VALID_OID = re.compile(r"^[0-9a-f]+$")
     _INDEX_RE = re.compile(r"^index (\S+)\.\.(\S+)(?:\s+\d+)?$")
 
@@ -79,17 +88,34 @@ def _sanitize_patch(diff: str) -> str:
         return bool(_VALID_OID.match(oid.lower()))
 
     filtered: list[str] = []
+    in_file_header = False  # True between "diff --git" and first "@@" of a file
+
     for line in lines:
         stripped = line.rstrip("\n")
-        m = _INDEX_RE.match(stripped)
-        if m:
-            old_oid, new_oid = m.group(1), m.group(2)
-            if _valid_oid(old_oid) and _valid_oid(new_oid):
-                filtered.append(line)
-            else:
-                logger.debug("_sanitize_patch: removed invalid index line: %r", stripped)
-        else:
+
+        if stripped.startswith("diff --git "):
+            in_file_header = True
             filtered.append(line)
+            continue
+
+        if stripped.startswith("@@"):
+            in_file_header = False
+            filtered.append(line)
+            continue
+
+        if in_file_header:
+            m = _INDEX_RE.match(stripped)
+            if m:
+                old_oid, new_oid = m.group(1), m.group(2)
+                if _valid_oid(old_oid) and _valid_oid(new_oid):
+                    filtered.append(line)
+                else:
+                    logger.debug(
+                        "_sanitize_patch: removed invalid index line: %r", stripped
+                    )
+                continue  # handled (kept or dropped)
+
+        filtered.append(line)
 
     # ------------------------------------------------------------------ #
     # Pass 2: recompute hunk-header line counts                           #
@@ -146,7 +172,11 @@ def _sanitize_patch(diff: str) -> str:
         new_count = sum(1 for bl in body if bl.startswith(" ") or bl.startswith("+"))
 
         # Rebuild header with corrected counts
-        new_header = f"@@ -{_hunk_part(old_start, old_count)} +{_hunk_part(new_start, new_count)} @@{suffix}\n"
+        new_header = (
+            f"@@ -{_hunk_part(old_start, old_count)}"
+            f" +{_hunk_part(new_start, new_count)}"
+            f" @@{suffix}\n"
+        )
 
         if new_header != line:
             logger.debug(
