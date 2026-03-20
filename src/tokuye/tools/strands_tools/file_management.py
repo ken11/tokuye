@@ -294,7 +294,7 @@ def read_lines(file_path: str, start_line: int, end_line: int) -> str:
 
 @tool(
     name="write_file",
-    description="Write UTF-8 text to a file. Access is restricted to the directory tree under `root_dir`; files matched by `.gitignore` are denied. Use append=true to append; otherwise it overwrites.",
+    description="Write UTF-8 text to a file. Access is restricted to the directory tree under `root_dir`; files matched by `.gitignore` are denied. Use append=true to append; otherwise it OVERWRITES THE ENTIRE FILE — all existing content is lost. You MUST read the complete file with read_lines first, then pass the full updated content.",
 )
 def write_file(file_path: str, text: str, append: bool = False) -> str:
     """
