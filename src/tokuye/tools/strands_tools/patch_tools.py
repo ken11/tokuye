@@ -9,6 +9,36 @@ from tokuye.utils.config import settings
 logger = logging.getLogger(__name__)
 
 
+def _extract_failed_hunks(diff: str) -> list[tuple[str, int]]:
+    """Parse a unified diff string and return (file_path, hunk_start_line) for each hunk."""
+    results = []
+    current_file = None
+    for line in diff.splitlines():
+        file_match = re.match(r"^\+\+\+ b/(.+)$", line)
+        if file_match:
+            current_file = file_match.group(1)
+        hunk_match = re.match(r"^@@ -(\d+)(?:,\d+)? \+\d+(?:,\d+)? @@", line)
+        if hunk_match and current_file is not None:
+            results.append((current_file, int(hunk_match.group(1))))
+    return results
+
+
+def _build_context_hint(file_path: str, line: int, radius: int = 10) -> str:
+    """Return a string showing lines around `line` (1-indexed) in `file_path`.
+    Returns empty string if the file cannot be read."""
+    try:
+        with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+            lines = f.readlines()
+        start = max(0, line - 1 - radius)
+        end = min(len(lines), line - 1 + radius + 1)
+        numbered = []
+        for i, content in enumerate(lines[start:end], start=start + 1):
+            numbered.append(f"  {i}: {content.rstrip()}")
+        return f"Context around line {line} in {file_path}:\n" + "\n".join(numbered)
+    except Exception:
+        return ""
+
+
 @tool(
     name="apply_patch",
     description="Apply a git diff patch to the repository. Accepts a string containing the diff in git format.",
@@ -118,5 +148,14 @@ def _apply_patch_with_fallbacks(diff: str) -> str:
     final_error = f"All patch application strategies failed:\n{all_errors}"
     logger.error(final_error)
 
-    # As a last resort, display detailed error information
+    # Build context hints for failed hunks
+    hints = []
+    for file_path, hunk_line in _extract_failed_hunks(diff_lf):
+        hint = _build_context_hint(file_path, hunk_line)
+        if hint:
+            hints.append(hint)
+
+    if hints:
+        final_error += "\n\nFile context at failed locations:\n" + "\n".join(hints)
+
     raise RuntimeError(final_error)
