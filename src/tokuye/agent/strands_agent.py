@@ -7,13 +7,13 @@ from strands.agent import AgentResult
 from strands.agent.conversation_manager import SummarizingConversationManager
 from strands.models import BedrockModel
 from strands.session.file_session_manager import FileSessionManager
-from strands.types.event_loop import Usage
-from tokuye.prompts.prompt_loader import load_custom_system_prompt, load_prompt, load_prompt_if_exists
+from tokuye.agent.node_agents import NodeAgents
+from tokuye.agent.state_machine import DevState, StateClassifier, StateMachine
 from tokuye.mcp import MCPClientManager
+from tokuye.prompts.prompt_loader import (load_custom_system_prompt,
+                                          load_prompt, load_prompt_if_exists)
 from tokuye.tools.strands_tools import all_tools
 from tokuye.tools.strands_tools.phase_tool import configure_phase_models
-from tokuye.agent.state_machine import DevState, StateClassifier, StateMachine
-from tokuye.agent.node_agents import NodeAgents
 from tokuye.utils.config import settings
 from tokuye.utils.token_tracker import token_tracker
 
@@ -49,7 +49,13 @@ class MaxStepsException(Exception):
 
 class StrandsAgent:
     def __init__(
-        self, thread_id, max_steps, add_ai_message, add_system_message, set_thinking, update_token_usage
+        self,
+        thread_id,
+        max_steps,
+        add_ai_message,
+        add_system_message,
+        set_thinking,
+        update_token_usage,
     ):
         self.add_ai_message = add_ai_message
         self.add_system_message = add_system_message
@@ -119,7 +125,9 @@ class StrandsAgent:
 
         self.session_dir = settings.strands_session_dir
         if not self.session_dir:
-            self.session_dir = os.path.join(settings.project_root, ".tokuye", "sessions")
+            self.session_dir = os.path.join(
+                settings.project_root, ".tokuye", "sessions"
+            )
         os.makedirs(self.session_dir, exist_ok=True)
         self.session_manager = FileSessionManager(
             session_id=thread_id, storage_dir=self.session_dir
@@ -183,7 +191,7 @@ class StrandsAgent:
         # Buffers to carry outputs between nodes (v2 only)
         self._last_planner_output: str = ""
         self._last_developer_output: str = ""
-        self.current_task_branch: str = ""   # ← add this line
+        self.current_task_branch: str = ""  # ← add this line
 
     async def __call__(self, *args, **kwargs):
         self.set_thinking(True)
@@ -226,7 +234,6 @@ class StrandsAgent:
             return None
 
         elif next_state == DevState.PLANNING:
-            self.current_task_branch = ""   # reset on new task start
             result = await nodes.invoke_planner(message)
             # Capture Planner output for downstream nodes
             self._last_planner_output = str(result)
@@ -255,8 +262,9 @@ class StrandsAgent:
             self._last_planner_output = ""  # consumed
             # After IMPLEMENTING completes, capture the active branch name
             try:
-                from git import Repo as _Repo
-                self.current_task_branch = _Repo(settings.project_root).active_branch.name
+                self.current_task_branch = Repo(
+                    settings.project_root
+                ).active_branch.name
             except Exception:
                 pass
             sm.transition_after_node()
@@ -290,7 +298,9 @@ class StrandsAgent:
             result = None
 
         else:
-            logger.warning("v2: unhandled state %s, falling back to planner", next_state.value)
+            logger.warning(
+                "v2: unhandled state %s, falling back to planner", next_state.value
+            )
             result = await nodes.invoke_planner(message)
 
         return result
