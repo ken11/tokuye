@@ -1,10 +1,12 @@
 import logging
 import re
+from pathlib import Path
 from typing import List, Optional, Tuple
 
 from git import Repo
 from strands import tool
 from tokuye.utils.config import settings
+from tokuye.tools.strands_tools.utils import _is_ignored_by_git
 
 logger = logging.getLogger(__name__)
 
