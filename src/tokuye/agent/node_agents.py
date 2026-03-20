@@ -177,7 +177,7 @@ class NodeAgents:
             pr_creator_prompt = load_prompt("system_prompt_pr_creator.md")
         self.pr_creator = Agent(
             model=pr_model,
-            tools=list(pr_creator_tools) + mcp_tools,
+            tools=list(pr_creator_tools),
             system_prompt=pr_creator_prompt,
             session_manager=FileSessionManager(
                 session_id=f"{thread_id}_pr_creator", storage_dir=session_dir
