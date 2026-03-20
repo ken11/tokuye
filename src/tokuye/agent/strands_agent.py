@@ -1,6 +1,7 @@
 import logging
 import os
 
+from git import Repo
 from strands import Agent
 from strands.agent import AgentResult
 from strands.agent.conversation_manager import SummarizingConversationManager
@@ -182,6 +183,7 @@ class StrandsAgent:
         # Buffers to carry outputs between nodes (v2 only)
         self._last_planner_output: str = ""
         self._last_developer_output: str = ""
+        self.current_task_branch: str = ""   # ← add this line
 
     async def __call__(self, *args, **kwargs):
         self.set_thinking(True)
@@ -224,6 +226,7 @@ class StrandsAgent:
             return None
 
         elif next_state == DevState.PLANNING:
+            self.current_task_branch = ""   # reset on new task start
             result = await nodes.invoke_planner(message)
             # Capture Planner output for downstream nodes
             self._last_planner_output = str(result)
@@ -239,9 +242,23 @@ class StrandsAgent:
             # Prefer Planner output as the source of truth.
             # Fall back to user message when re-implementing from AWAITING_REVIEW.
             source = self._last_planner_output if self._last_planner_output else message
+            # If already on a work branch (re-implementation case), instruct Developer not to create a new branch
+            if self.current_task_branch:
+                source = (
+                    f"{source}\n\n---\n"
+                    f"**Branch instruction**: You are already on the work branch "
+                    f"`{self.current_task_branch}`. Do NOT call create_branch. "
+                    f"Just implement the changes and commit."
+                )
             result = await nodes.invoke_developer(source)
             self._last_developer_output = str(result)
             self._last_planner_output = ""  # consumed
+            # After IMPLEMENTING completes, capture the active branch name
+            try:
+                from git import Repo as _Repo
+                self.current_task_branch = _Repo(settings.project_root).active_branch.name
+            except Exception:
+                pass
             sm.transition_after_node()
             self.add_system_message(f"[State: {sm.state.value}]")
 
