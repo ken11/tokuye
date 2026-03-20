@@ -41,6 +41,156 @@ def _build_context_hint(file_path: str, line: int, radius: int = 10) -> str:
         return ""
 
 
+def _sanitize_patch(diff: str) -> str:
+    """Repair common structural defects in AI-generated unified diffs.
+
+    Two classes of defects are fixed:
+
+    1. **Invalid ``index`` lines** – Git requires both object IDs in an
+       ``index <old>..<new>`` line to be valid hex strings.  Devstral
+       sometimes emits placeholder values that contain non-hex characters
+       (e.g. ``abcdefg``).  Such lines are removed entirely; ``git apply``
+       does not require them.
+
+       Only lines in the per-file header region (between ``diff --git``
+       and the first ``@@`` of each file) are examined.  This prevents
+       false-positive removal of hunk-body lines that happen to match the
+       ``index X..Y`` pattern (e.g. content in Markdown or config files).
+
+    2. **Incorrect hunk-header line counts** – The ``@@ -a,b +c,d @@``
+       header must declare the exact number of old-side (``b``) and
+       new-side (``d``) lines present in the hunk body.  Devstral
+       frequently miscounts these values.  This function recomputes both
+       counts from the actual hunk body and rewrites the header in-place.
+
+    The function is intentionally conservative: it only touches lines that
+    are structurally wrong and leaves everything else unchanged.
+    """
+    lines = diff.splitlines(keepends=True)
+
+    # ------------------------------------------------------------------ #
+    # Pass 1: strip invalid ``index`` lines                               #
+    # ------------------------------------------------------------------ #
+    # ``index`` metadata lines only appear in the per-file header region,
+    # i.e. after a ``diff --git`` line and before the first ``@@`` hunk
+    # header of that file.  We track this region with ``in_file_header``
+    # so that hunk-body content is never inspected.
+    #
+    # _INDEX_RE uses \S+ (not [0-9a-fA-F.]+) so that OIDs containing
+    # non-hex characters (e.g. "abcdefg") are still captured and then
+    # rejected by _valid_oid().
+    _VALID_OID = re.compile(r"^[0-9a-f]+$")
+    _INDEX_RE = re.compile(r"^index (\S+)\.\.(\S+)(?:\s+\d+)?$")
+
+    def _valid_oid(oid: str) -> bool:
+        # Allow all-zeros placeholder used for new/deleted files.
+        # Reject anything containing non-hex characters.
+        return bool(_VALID_OID.match(oid.lower()))
+
+    filtered: list[str] = []
+    in_file_header = False  # True between "diff --git" and first "@@" of a file
+
+    for line in lines:
+        stripped = line.rstrip("\n")
+
+        if stripped.startswith("diff --git "):
+            in_file_header = True
+            filtered.append(line)
+            continue
+
+        if stripped.startswith("@@"):
+            in_file_header = False
+            filtered.append(line)
+            continue
+
+        if in_file_header:
+            m = _INDEX_RE.match(stripped)
+            if m:
+                old_oid, new_oid = m.group(1), m.group(2)
+                if _valid_oid(old_oid) and _valid_oid(new_oid):
+                    filtered.append(line)
+                else:
+                    logger.debug(
+                        "_sanitize_patch: removed invalid index line: %r", stripped
+                    )
+                continue  # handled (kept or dropped)
+
+        filtered.append(line)
+
+    # ------------------------------------------------------------------ #
+    # Pass 2: recompute hunk-header line counts                           #
+    # ------------------------------------------------------------------ #
+    _HUNK_RE = re.compile(
+        r"^(@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@)([ \t].*)?\n?$"
+    )
+
+    def _hunk_part(start: str, count: int) -> str:
+        """Format one side of a hunk header (e.g. ``10,3`` or ``10``).
+
+        Rules (matching git's own output):
+        - count == 0  → ``<start>,0``  (must keep the explicit ,0)
+        - count == 1  → ``<start>``    (,1 is omitted by convention)
+        - count >= 2  → ``<start>,<count>``
+        """
+        if count == 0:
+            return f"{start},0"
+        if count == 1:
+            return start
+        return f"{start},{count}"
+
+    out: list[str] = []
+    i = 0
+    while i < len(filtered):
+        line = filtered[i]
+        m = _HUNK_RE.match(line)
+        if not m:
+            out.append(line)
+            i += 1
+            continue
+
+        old_start = m.group(2)
+        new_start = m.group(3)
+        suffix = m.group(4) or ""  # text after the closing @@
+
+        # Collect hunk body lines (everything until the next hunk/file header)
+        i += 1
+        body: list[str] = []
+        while i < len(filtered):
+            bl = filtered[i]
+            if (
+                bl.startswith("@@")
+                or bl.startswith("diff ")
+                or bl.startswith("--- ")
+                or bl.startswith("+++ ")
+            ):
+                break
+            body.append(bl)
+            i += 1
+
+        # Count old-side (context + removal) and new-side (context + addition) lines
+        old_count = sum(1 for bl in body if bl.startswith(" ") or bl.startswith("-"))
+        new_count = sum(1 for bl in body if bl.startswith(" ") or bl.startswith("+"))
+
+        # Rebuild header with corrected counts
+        new_header = (
+            f"@@ -{_hunk_part(old_start, old_count)}"
+            f" +{_hunk_part(new_start, new_count)}"
+            f" @@{suffix}\n"
+        )
+
+        if new_header != line:
+            logger.debug(
+                "_sanitize_patch: rewrote hunk header %r → %r",
+                line.rstrip(),
+                new_header.rstrip(),
+            )
+
+        out.append(new_header)
+        out.extend(body)
+
+    return "".join(out)
+
+
 @tool(
     name="apply_patch",
     description="Apply a git diff patch to the repository. Accepts a string containing the diff in git format.",
@@ -93,6 +243,8 @@ def _apply_patch_with_fallbacks(diff: str) -> str:
     # 2. Add newline at end if missing
     if not diff_lf.endswith("\n"):
         diff_lf += "\n"
+    # 3. Sanitize AI-generated patch defects (invalid index lines, wrong hunk counts)
+    diff_lf = _sanitize_patch(diff_lf)
 
     tokuye_dir = settings.project_root / ".tokuye"
     tokuye_dir.mkdir(exist_ok=True)
