@@ -73,7 +73,7 @@ class StateClassifier:
             callback_handler=None,
         )
 
-    def classify(self, current_state: DevState, user_message: str) -> DevState:
+    async def classify(self, current_state: DevState, user_message: str) -> DevState:
         """Return the next state synchronously."""
         if settings.language == "en":
             user_content = (
@@ -88,7 +88,7 @@ class StateClassifier:
         try:
             # Reset history to keep each classification stateless
             self._agent.messages.clear()
-            result = self._agent(user_content)
+            result = await self._agent.invoke_async(user_content)
             raw = str(result)
 
             # Parse JSON
@@ -126,9 +126,9 @@ class StateMachine:
         self._classifier = classifier
         self.state: DevState = DevState.IDLE
 
-    def transition_by_user(self, user_message: str) -> DevState:
+    async def transition_by_user(self, user_message: str) -> DevState:
         """Classify user message and advance state. Returns the new state."""
-        next_state = self._classifier.classify(self.state, user_message)
+        next_state = await self._classifier.classify(self.state, user_message)
         self.state = next_state
         return self.state
 

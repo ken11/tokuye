@@ -212,7 +212,7 @@ class StrandsAgent:
 
         # --- Determine next state ----------------------------------------
         if message is not None:
-            next_state = sm.transition_by_user(message)
+            next_state = await sm.transition_by_user(message)
         else:
             next_state = sm.state
 
@@ -286,7 +286,7 @@ class StrandsAgent:
         if "message" in kwargs and kwargs["message"].get("role") == "assistant":
             if kwargs["message"].get("content") is not None:
                 for c in kwargs["message"]["content"]:
-                    if c.get("text"):
+                    if c.get("text", "").strip():
                         self.add_ai_message(c["text"])
 
     def _update_token_usage(self, result: AgentResult):
