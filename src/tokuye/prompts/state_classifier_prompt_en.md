@@ -38,22 +38,16 @@ You receive the current state and the user's message, and return the next state.
 - Implementation complete (auto-advance) → `AWAITING_REVIEW`
 
 ### From AWAITING_REVIEW
-- Fix / redo request ("fix this", "this isn't done", etc.) → `IMPLEMENTING`
-- Request to revisit the plan ("let's rethink the design", etc.) → `PLANNING`
 - Self-review request ("do a self review", "review before submitting", etc.) → `SELF_REVIEWING`
 - PR creation request ("create a PR", "submit it", etc.) → `PR_CREATING`
 - Done / finished ("thanks", "this is fine", etc.) → `IDLE`
+- Anything else (fix requests, redo, plan revision, additional requirements, questions, etc.) → `PLANNING`
 
 ### From PR_CREATING
 - PR creation complete (auto-advance) → `IDLE`
 
 ### From SELF_REVIEWING
 - Review complete (auto-advance) → `AWAITING_REVIEW`
-
-### From AWAITING_REVIEW (after self-review)
-- Fix / redo request ("fix this", etc.) → `IMPLEMENTING`
-- PR creation request ("create a PR", etc.) → `PR_CREATING`
-- Done / finished → `IDLE`
 
 ### From REVIEWING
 - Review content presented (auto-advance) → `AWAITING_REVIEW_APPROVAL`

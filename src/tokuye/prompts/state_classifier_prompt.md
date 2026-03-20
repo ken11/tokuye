@@ -38,22 +38,16 @@
 - 実装完了の報告 → `AWAITING_REVIEW`（自動遷移）
 
 ### AWAITING_REVIEW からの遷移
-- 修正・やり直し依頼（「ここ直して」「これできてない」等） → `IMPLEMENTING`
-- 計画から見直し依頼（「やっぱり設計から」等） → `PLANNING`
 - 自己レビュー依頼（「self reviewして」「レビューしてから出して」等） → `SELF_REVIEWING`
 - PR作成依頼（「PR作って」「出して」等） → `PR_CREATING`
 - 完結・終了（「ありがとう」「これでいい」等） → `IDLE`
+- 上記以外（修正・やり直し・計画見直し・追加要件・質問等、すべて） → `PLANNING`
 
 ### PR_CREATING からの遷移
 - PR作成完了の報告 → `IDLE`（自動遷移）
 
 ### SELF_REVIEWING からの遷移
 - レビュー完了の報告 → `AWAITING_REVIEW`（自動遷移）
-
-### AWAITING_REVIEW（self review後）からの遷移
-- 修正・やり直し依頼（「ここ直して」等） → `IMPLEMENTING`
-- PR作成依頼（「PR作って」等） → `PR_CREATING`
-- 完結・終了 → `IDLE`
 
 ### REVIEWING からの遷移
 - レビュー内容の提示完了 → `AWAITING_REVIEW_APPROVAL`（自動遷移）

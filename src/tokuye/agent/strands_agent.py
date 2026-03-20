@@ -234,7 +234,17 @@ class StrandsAgent:
             return None
 
         elif next_state == DevState.PLANNING:
-            result = await nodes.invoke_planner(message)
+            # If Developer output exists (i.e. coming from AWAITING_REVIEW),
+            # prepend it so Planner has full context of what was implemented.
+            if self._last_developer_output:
+                planner_input = (
+                    f"## Implementation result\n{self._last_developer_output}\n\n"
+                    f"## User instruction\n{message}"
+                )
+                self._last_developer_output = ""  # consumed
+            else:
+                planner_input = message
+            result = await nodes.invoke_planner(planner_input)
             # Capture Planner output for downstream nodes
             self._last_planner_output = str(result)
             sm.transition_after_node()  # PLANNING → AWAITING_APPROVAL
@@ -247,7 +257,8 @@ class StrandsAgent:
 
         elif next_state == DevState.IMPLEMENTING:
             # Prefer Planner output as the source of truth.
-            # Fall back to user message when re-implementing from AWAITING_REVIEW.
+            # Source is always Planner output (AWAITING_APPROVAL → IMPLEMENTING path).
+            # _last_planner_output should always be set here; message fallback is a safeguard.
             source = self._last_planner_output if self._last_planner_output else message
             # If already on a work branch (re-implementation case), instruct Developer not to create a new branch
             if self.current_task_branch:
