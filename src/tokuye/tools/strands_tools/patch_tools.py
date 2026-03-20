@@ -66,14 +66,16 @@ def _sanitize_patch(diff: str) -> str:
     # ------------------------------------------------------------------ #
     # Pass 1: strip invalid ``index`` lines                               #
     # ------------------------------------------------------------------ #
+    # Match any "index X..Y" line regardless of what X/Y contain, then
+    # validate the OIDs separately.  Using \S+ instead of [0-9a-fA-F.]+
+    # ensures we catch lines where the OID already contains non-hex chars
+    # (e.g. "abcdefg") that would otherwise fail to match and slip through.
     _VALID_OID = re.compile(r"^[0-9a-f]+$")
-    _INDEX_RE = re.compile(
-        r"^index ([0-9a-fA-F.]+)\.\.([0-9a-fA-F.]+)(?:\s+\d+)?$"
-    )
+    _INDEX_RE = re.compile(r"^index (\S+)\.\.(\S+)(?:\s+\d+)?$")
 
     def _valid_oid(oid: str) -> bool:
-        # Allow "0000000" (all-zeros) as a valid placeholder for new/deleted files.
-        # Reject anything that contains non-hex characters.
+        # Allow all-zeros placeholder used for new/deleted files.
+        # Reject anything containing non-hex characters.
         return bool(_VALID_OID.match(oid.lower()))
 
     filtered: list[str] = []
@@ -95,6 +97,20 @@ def _sanitize_patch(diff: str) -> str:
     _HUNK_RE = re.compile(
         r"^(@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@)([ \t].*)?\n?$"
     )
+
+    def _hunk_part(start: str, count: int) -> str:
+        """Format one side of a hunk header (e.g. ``10,3`` or ``10``).
+
+        Rules (matching git's own output):
+        - count == 0  → ``<start>,0``  (must keep the explicit ,0)
+        - count == 1  → ``<start>``    (,1 is omitted by convention)
+        - count >= 2  → ``<start>,<count>``
+        """
+        if count == 0:
+            return f"{start},0"
+        if count == 1:
+            return start
+        return f"{start},{count}"
 
     out: list[str] = []
     i = 0
@@ -129,11 +145,8 @@ def _sanitize_patch(diff: str) -> str:
         old_count = sum(1 for bl in body if bl.startswith(" ") or bl.startswith("-"))
         new_count = sum(1 for bl in body if bl.startswith(" ") or bl.startswith("+"))
 
-        # Rebuild header with corrected counts.
-        # Omit ",1" suffix (git accepts bare line number when count == 1).
-        old_part = old_start if old_count == 1 else f"{old_start},{old_count}"
-        new_part = new_start if new_count == 1 else f"{new_start},{new_count}"
-        new_header = f"@@ -{old_part} +{new_part} @@{suffix}\n"
+        # Rebuild header with corrected counts
+        new_header = f"@@ -{_hunk_part(old_start, old_count)} +{_hunk_part(new_start, new_count)} @@{suffix}\n"
 
         if new_header != line:
             logger.debug(
