@@ -61,10 +61,16 @@ def parse_repository(
 
         file_text = elem.text or ""
         if file_text.startswith("\n"):
-            file_text = file_text.lstrip("\n")
+            file_text = file_text.split("\n", 1)[1]  # drop exactly the one blank line inserted by render_xml
 
         file_lines = file_text.splitlines()
-        total_lines = total_lines_attr if total_lines_attr > 0 else len(file_lines)
+        total_lines = total_lines_attr  # use the authoritative line count written by render_xml
+
+        # Pad file_text with newlines to match the original file's line count
+        if total_lines_attr > 0:
+            current_line_count = len(file_text.splitlines())
+            if current_line_count < total_lines_attr:
+                file_text += "\n" * (total_lines_attr - current_line_count)
 
         lang, segments = segment_code_by_path(file_text, file_path)  # List[CodeSegment]
         language = None
