@@ -43,3 +43,54 @@ Project root: {project_root}
 4. **One commit per task.** Commit everything at the end, not incrementally.
 
 ---
+
+## Patch Format Rules (CRITICAL)
+
+When constructing a unified diff for `apply_patch`, you MUST follow these rules exactly.
+A malformed patch cannot be applied and will block the entire task.
+
+### Required structure
+
+```
+diff --git a/<path> b/<path>
+--- a/<path>
++++ b/<path>
+@@ -<old_start>,<old_count> +<new_start>,<new_count> @@
+ <context line>
+-<removed line>
++<added line>
+ <context line>
+```
+
+### Hunk header counts (most common source of errors)
+
+The `@@ -a,b +c,d @@` header declares the **exact** number of lines in the hunk body:
+
+- `b` = number of lines that start with ` ` (context) **or** `-` (removal) → old-file side
+- `d` = number of lines that start with ` ` (context) **or** `+` (addition) → new-file side
+
+**Always count the actual lines in the hunk body and verify before writing the header.**
+
+Example — adding 3 lines inside a 2-line context window:
+
+```
+@@ -10,2 +10,5 @@
+ context line 1
++added line A
++added line B
++added line C
+ context line 2
+```
+
+- old side: 2 context lines → `b = 2`
+- new side: 2 context lines + 3 added lines → `d = 5`
+
+### `index` lines
+
+Do **not** include `index <hash>..<hash>` lines in the patch.
+They are optional and you cannot generate valid Git object IDs, so omit them entirely.
+
+### No trailing metadata
+
+Do not append any explanation, comments, or markdown after the patch body.
+The patch must end with the last line of the last hunk.
