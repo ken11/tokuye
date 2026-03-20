@@ -78,7 +78,6 @@ planner_tools = [
 
 developer_tools = [
     read_lines,
-    write_file,
     apply_patch,
     create_branch,
     commit_changes,
