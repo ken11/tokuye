@@ -9,7 +9,9 @@ Project root is {project_root}.
 
 1. Read the implementation plan you have been given.
 2. Implement the changes according to the plan.
-3. Create a work branch with create_branch.
+3. Set up the work branch:
+   - If the instructions include a "Branch instruction" specifying an existing branch, you are already on that branch. Do NOT call create_branch. Proceed directly to step 4.
+   - Otherwise, call create_branch to create a new work branch.
 4. Use apply_patch as the default edit tool.
    - Only use write_file when apply_patch genuinely fails (e.g., the patch cannot be applied cleanly).
    - When falling back to write_file, follow these steps WITHOUT EXCEPTION:
