@@ -85,6 +85,27 @@ Example — adding 3 lines inside a 2-line context window:
 - old side: 2 context lines → `b = 2`
 - new side: 2 context lines + 3 added lines → `d = 5`
 
+### Context lines (anchor for `git apply`)
+
+`git apply` locates the hunk by matching context lines against the actual file.
+Too few context lines → the match is ambiguous or fails entirely.
+
+**Rules:**
+- Include **at least 3 context lines** before and after the changed block.
+- If fewer than 3 lines exist at the top or bottom of the file, include all available lines.
+- Context lines must be **copied verbatim** from the file — do not paraphrase or trim.
+
+### Hunk start line (`-<old_start>`)
+
+The `@@ -<old_start>, ...` value must be the **exact 1-indexed line number** of the first context (or removal) line in the hunk.
+
+**How to get it right:**
+1. Call `read_lines` on the target file to see the actual line numbers.
+2. Identify the first line you will include in the hunk (first context line before the change).
+3. Use that line number as `<old_start>`.
+
+Do **not** guess or estimate the start line. Always verify with `read_lines` first.
+
 ### `index` lines
 
 Do **not** include `index <hash>..<hash>` lines in the patch.
