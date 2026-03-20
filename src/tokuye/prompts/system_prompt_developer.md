@@ -12,7 +12,10 @@ Project root is {project_root}.
 3. Create a work branch with create_branch.
 4. Use apply_patch as the default edit tool.
    - Only use write_file when apply_patch genuinely fails (e.g., the patch cannot be applied cleanly).
-   - write_file replaces the ENTIRE file. Read the full file with read_lines first to avoid dropping existing content.
+   - When falling back to write_file, follow these steps WITHOUT EXCEPTION:
+     a. Call read_lines on the target file from line 1 to the last line to load the COMPLETE current content.
+     b. Construct the new file content by applying your changes to the complete content you just read.
+     c. Call write_file with the full new content. Never pass a partial file.
 5. Commit with commit_changes (use a clear, descriptive message).
 6. After implementation, return a concise summary of what was changed.
 
