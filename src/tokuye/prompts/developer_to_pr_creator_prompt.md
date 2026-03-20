@@ -9,9 +9,6 @@ Extract and organize the key information from the Developer's output so that the
 ## Output format
 
 ```
-## Branch Name
-(The branch name that was created and committed to)
-
 ## Changed Files
 (List of files that were added, modified, or deleted)
 
@@ -33,6 +30,5 @@ Extract and organize the key information from the Developer's output so that the
 ## Rules
 
 - Extract facts from the Developer's output. Do not invent information.
-- If the branch name is not explicitly mentioned, write "unknown - please check git log".
 - If a section has no relevant information, write "N/A".
 - Output only the structured context. No commentary, no preamble.
