@@ -234,7 +234,17 @@ class StrandsAgent:
             return None
 
         elif next_state == DevState.PLANNING:
-            result = await nodes.invoke_planner(message)
+            # If Developer output exists (i.e. coming from AWAITING_REVIEW),
+            # prepend it so Planner has full context of what was implemented.
+            if self._last_developer_output:
+                planner_input = (
+                    f"## Implementation result\n{self._last_developer_output}\n\n"
+                    f"## User instruction\n{message}"
+                )
+                self._last_developer_output = ""  # consumed
+            else:
+                planner_input = message
+            result = await nodes.invoke_planner(planner_input)
             # Capture Planner output for downstream nodes
             self._last_planner_output = str(result)
             sm.transition_after_node()  # PLANNING → AWAITING_APPROVAL
