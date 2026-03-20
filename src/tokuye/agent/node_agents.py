@@ -159,7 +159,7 @@ class NodeAgents:
         developer_prompt = load_prompt("system_prompt_developer.md")
         self.developer = Agent(
             model=impl_model,
-            tools=list(developer_tools) + mcp_tools,
+            tools=list(developer_tools),
             system_prompt=developer_prompt,
             session_manager=FileSessionManager(
                 session_id=f"{thread_id}_developer", storage_dir=session_dir
