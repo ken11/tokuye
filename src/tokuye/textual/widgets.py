@@ -2,7 +2,7 @@ from tokuye.utils.token_tracker import token_tracker
 
 from textual import on
 from textual.app import ComposeResult
-from textual.containers import Vertical, Horizontal
+from textual.containers import Vertical
 from textual.events import Key
 from textual.widget import Widget
 from textual.widgets import Button, Markdown, RichLog, TextArea
@@ -72,11 +72,11 @@ class ChatMessageWidget(Widget):
             self.styles.border = ("round", "violet")
         elif self.is_user:
             self.border_title = "You"
-            self.styles.border = ("round", "bright_white")
+            self.styles.border = ("round", "ansi_bright_white")
         else:
             from tokuye.utils.config import settings
             self.border_title = settings.name if settings.name else "Assistant"
-            self.styles.border = ("round", "sky_blue2")
+            self.styles.border = ("round", "lightskyblue")
 
     @on(Button.Pressed, ".copy-btn")
     def handle_copy(self, event: Button.Pressed) -> None:
