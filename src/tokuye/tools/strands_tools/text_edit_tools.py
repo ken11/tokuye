@@ -9,16 +9,18 @@ Each tool operates on exact string matching rather than line-number offsets,
 so the model only needs to copy a verbatim block from the file — no patch
 format, no hunk headers, no line counting.
 
+All file I/O uses UTF-8 encoding. Files with other encodings are not supported.
+
 Failure messages are intentionally specific to aid retry:
+  - "old_text must not be empty"
   - "old_text not found"
-  - "multiple matches (N)"
-  - "anchor not found"
-  - "anchor matched multiple locations (N)"
+  - "old_text matched multiple locations (N)"
+  - "anchor_text must not be empty"
+  - "anchor_text not found"
+  - "anchor_text matched multiple locations (N)"
 """
 
-import logging
 from pathlib import Path
-from typing import Tuple
 
 from strands import tool
 from tokuye.tools.strands_tools.utils import (
@@ -27,8 +29,6 @@ from tokuye.tools.strands_tools.utils import (
     get_validated_relative_path,
 )
 from tokuye.utils.config import settings
-
-logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -53,8 +53,8 @@ def _validate_path(file_path: str) -> Path:
     return abs_path
 
 
-def _read_validated_file(file_path: str) -> Tuple[Path, str]:
-    """Validate path and read file content. Returns (abs_path, content) or raises."""
+def _read_validated_file(file_path: str) -> tuple[Path, str]:
+    """Validate path and read file content (UTF-8). Returns (abs_path, content) or raises."""
     abs_path = _validate_path(file_path)
     if not abs_path.exists():
         raise FileNotFoundError(f"file not found: {file_path}")
@@ -64,7 +64,7 @@ def _read_validated_file(file_path: str) -> Tuple[Path, str]:
     return abs_path, content
 
 
-def _locate_exact(content: str, search_text: str, label: str) -> Tuple[int, str]:
+def _locate_exact(content: str, search_text: str, label: str) -> tuple[int, str]:
     """
     Find search_text in content, enforcing exactly one match.
 
@@ -74,9 +74,7 @@ def _locate_exact(content: str, search_text: str, label: str) -> Tuple[int, str]
     label is used in error messages ("old_text" or "anchor_text").
     """
     if not search_text:
-        return -1, (
-            f"Error: {label} must not be empty"
-        )
+        return -1, f"Error: {label} must not be empty"
 
     count = content.count(search_text)
     if count == 0:
@@ -103,14 +101,17 @@ def _locate_exact(content: str, search_text: str, label: str) -> Tuple[int, str]
     description=(
         "Replace an exact block of text in a file with new text. "
         "`old_text` must match exactly one location in the file — "
-        "fails with 'old_text not found' if zero matches, "
-        "'multiple matches (N)' if more than one. "
-        "Use read_lines to copy the target block verbatim before calling this tool."
+        "fails with 'old_text not found' (0 matches) or "
+        "'old_text matched multiple locations (N)' (N > 1 matches). "
+        "Use read_lines to copy the target block verbatim before calling this tool. "
+        "Only UTF-8 encoded files are supported."
     ),
 )
 def replace_exact(file_path: str, old_text: str, new_text: str) -> str:
     """
     Replace an exact block of text in a file.
+
+    Only UTF-8 encoded files are supported.
 
     Args:
         file_path: Relative path of the file to edit
@@ -118,7 +119,7 @@ def replace_exact(file_path: str, old_text: str, new_text: str) -> str:
         new_text: Replacement text
 
     Returns:
-        Success or failure message
+        Success message including character counts, or a failure message.
     """
     try:
         abs_path, content = _read_validated_file(file_path)
@@ -139,7 +140,10 @@ def replace_exact(file_path: str, old_text: str, new_text: str) -> str:
     except Exception as e:
         return f"Error writing file: {e}"
 
-    return f"replace_exact applied successfully to {file_path}"
+    return (
+        f"replace_exact applied successfully to {file_path} "
+        f"(removed {len(old_text)} chars, inserted {len(new_text)} chars)"
+    )
 
 
 @tool(
@@ -147,13 +151,17 @@ def replace_exact(file_path: str, old_text: str, new_text: str) -> str:
     description=(
         "Insert new text immediately after an exact anchor block in a file. "
         "`anchor_text` must match exactly one location — "
-        "fails with 'anchor not found' or 'anchor matched multiple locations (N)'. "
-        "Use read_lines to copy the anchor verbatim before calling this tool."
+        "fails with 'anchor_text not found' (0 matches) or "
+        "'anchor_text matched multiple locations (N)' (N > 1 matches). "
+        "Use read_lines to copy the anchor verbatim before calling this tool. "
+        "Only UTF-8 encoded files are supported."
     ),
 )
 def insert_after_exact(file_path: str, anchor_text: str, new_text: str) -> str:
     """
     Insert text immediately after an exact anchor block.
+
+    Only UTF-8 encoded files are supported.
 
     Args:
         file_path: Relative path of the file to edit
@@ -161,7 +169,7 @@ def insert_after_exact(file_path: str, anchor_text: str, new_text: str) -> str:
         new_text: Text to insert after the anchor
 
     Returns:
-        Success or failure message
+        Success message including character count, or a failure message.
     """
     try:
         abs_path, content = _read_validated_file(file_path)
@@ -183,7 +191,10 @@ def insert_after_exact(file_path: str, anchor_text: str, new_text: str) -> str:
     except Exception as e:
         return f"Error writing file: {e}"
 
-    return f"insert_after_exact applied successfully to {file_path}"
+    return (
+        f"insert_after_exact applied successfully to {file_path} "
+        f"(inserted {len(new_text)} chars after anchor)"
+    )
 
 
 @tool(
@@ -191,13 +202,17 @@ def insert_after_exact(file_path: str, anchor_text: str, new_text: str) -> str:
     description=(
         "Insert new text immediately before an exact anchor block in a file. "
         "`anchor_text` must match exactly one location — "
-        "fails with 'anchor not found' or 'anchor matched multiple locations (N)'. "
-        "Use read_lines to copy the anchor verbatim before calling this tool."
+        "fails with 'anchor_text not found' (0 matches) or "
+        "'anchor_text matched multiple locations (N)' (N > 1 matches). "
+        "Use read_lines to copy the anchor verbatim before calling this tool. "
+        "Only UTF-8 encoded files are supported."
     ),
 )
 def insert_before_exact(file_path: str, anchor_text: str, new_text: str) -> str:
     """
     Insert text immediately before an exact anchor block.
+
+    Only UTF-8 encoded files are supported.
 
     Args:
         file_path: Relative path of the file to edit
@@ -205,7 +220,7 @@ def insert_before_exact(file_path: str, anchor_text: str, new_text: str) -> str:
         new_text: Text to insert before the anchor
 
     Returns:
-        Success or failure message
+        Success message including character count, or a failure message.
     """
     try:
         abs_path, content = _read_validated_file(file_path)
@@ -226,4 +241,7 @@ def insert_before_exact(file_path: str, anchor_text: str, new_text: str) -> str:
     except Exception as e:
         return f"Error writing file: {e}"
 
-    return f"insert_before_exact applied successfully to {file_path}"
+    return (
+        f"insert_before_exact applied successfully to {file_path} "
+        f"(inserted {len(new_text)} chars before anchor)"
+    )
