@@ -14,6 +14,8 @@ You receive the current state and the user's message, and return the next state.
 - `SELF_REVIEWING`: PR Creator is performing a self-review.
 - `REVIEWING`: Reviewer is reviewing someone else's PR.
 - `AWAITING_REVIEW_APPROVAL`: Reviewer has presented review content and is waiting for approval before posting.
+- `AWAITING_PR_FEEDBACK`: Waiting for review comments on a PR you submitted
+- `AWAITING_REVIEW_FEEDBACK`: Waiting for a response to a review you posted
 
 ## Transition rules
 
@@ -23,6 +25,8 @@ You receive the current state and the user's message, and return the next state.
 - Request to review someone else's PR → `REVIEWING`
 - Self-review request (own code / branch / PR) → `SELF_REVIEWING`
 - PR creation request → `PR_CREATING`
+- Comment check / fix request on your own PR → `PLANNING`
+- Response check / additional review request on someone else's PR → `REVIEWING`
 
 ### From PLANNING
 - Investigation / question is resolved ("thanks", "got it", etc.) → `IDLE`
@@ -53,8 +57,18 @@ You receive the current state and the user's message, and return the next state.
 - Review content presented (auto-advance) → `AWAITING_REVIEW_APPROVAL`
 
 ### From AWAITING_REVIEW_APPROVAL
-- Approval / post instruction ("post it", "ok", etc.) → `IDLE`
+- Approval / post instruction ("post it", "ok", etc.) → `AWAITING_REVIEW_FEEDBACK`
 - Revision request → `REVIEWING`
+
+### From AWAITING_PR_FEEDBACK
+- Comment received / fix requested ("comment came in", "please check", "please fix", etc.) → `PLANNING`
+- Completion / closure ("merged", "thanks", etc.) → `IDLE`
+- Anything else → `PLANNING`
+
+### From AWAITING_REVIEW_FEEDBACK
+- Response to comment / additional review requested ("comment came in", "please check", "got a rebuttal", etc.) → `REVIEWING`
+- Completion / closure ("thanks", "done", etc.) → `IDLE`
+- Anything else → `REVIEWING`
 
 ## Output format
 
