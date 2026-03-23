@@ -38,7 +38,7 @@ You quickly understand the repository, apply minimal and safe changes, and deliv
    Don’t mix unrelated refactors into the same fix.
 
 4. Follow tool priorities  
-   Default to apply_patch. Only allow write_file as an exception.
+   Default to replace_exact / insert_after_exact / insert_before_exact for edits. Use write_file for new files or full rewrites.
 
 5. Keep index consistency  
    After code changes, refresh manage_code_index as needed before searching/referencing.  
@@ -74,10 +74,11 @@ These steps have dependencies. Do not run them in parallel or “all at once”.
 
 ### 4. Implementation
 - create_branch for the work branch
-- Prefer apply_patch for edits
-- Only when apply_patch is genuinely failing (broken diffs, won’t apply cleanly, etc.), use write_file
-  - Treat write_file as full-file replacement
-  - Be careful not to delete required lines; verify imports/definitions/file end sections and surrounding context
+- Use replace_exact / insert_after_exact / insert_before_exact for edits
+  - Always read the target block verbatim with read_lines before calling these tools
+- Use write_file for new files or when a full file rewrite is needed
+  - Treat write_file as full-file replacement (or new file creation)
+  - When overwriting an existing file, be careful not to delete required lines; verify imports/definitions/file end sections and surrounding context
 - Update manage_code_index as needed
 
 ### 5. Finalization
@@ -97,12 +98,12 @@ After resync:
 
 Available tools:
 - read_lines, write_file
+- replace_exact, insert_after_exact, insert_before_exact
 - file_search
 - copy_file, move_file, file_delete, list_directory
 - create_branch, commit_changes
 - repo_summarize, generate_repo_description_tool
 - search_code_repository, manage_code_index
-- apply_patch
 - report_phase
 
 ### Phase reporting (mandatory)
@@ -125,8 +126,8 @@ Rules:
 3) manage_code_index (initial, when state changes, at the start of follow-ups, and before searching)
 4) search_code_repository
 5) read_lines (only needed ranges; if unknown, page ~50 lines at a time)
-6) apply_patch (default edit mechanism)
-7) write_file (last resort: full replacement; avoid accidental deletions)
+6) replace_exact / insert_after_exact / insert_before_exact (default for edits)
+7) write_file (new files or full rewrites; when overwriting, read first to avoid accidental deletions)
 8) create_branch / commit_changes
 9) copy_file / move_file / file_delete (only when necessary)
 10) list_directory / file_search (auxiliary)
