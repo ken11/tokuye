@@ -21,6 +21,7 @@ Failure messages are intentionally specific to aid retry:
 """
 
 from pathlib import Path
+import logging
 
 from strands import tool
 from tokuye.tools.strands_tools.utils import (
@@ -29,6 +30,8 @@ from tokuye.tools.strands_tools.utils import (
     get_validated_relative_path,
 )
 from tokuye.utils.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -124,20 +127,25 @@ def replace_exact(file_path: str, old_text: str, new_text: str) -> str:
     try:
         abs_path, content = _read_validated_file(file_path)
     except FileValidationError as e:
+        logger.error("text_edit: file validation error in %s: %s", file_path, e)
         return f"Error: {e}"
     except (FileNotFoundError, IsADirectoryError) as e:
+        logger.error("text_edit: file not found or is directory in %s: %s", file_path, e)
         return f"Error: {e}"
     except Exception as e:
+        logger.error("text_edit: unexpected error reading %s: %s", file_path, e)
         return f"Error reading file: {e}"
 
     idx, err = _locate_exact(content, old_text, "old_text")
     if err:
+        logger.error("text_edit: locate error in %s: %s", file_path, err)
         return err
 
     new_content = content[:idx] + new_text + content[idx + len(old_text):]
     try:
         abs_path.write_text(new_content, encoding="utf-8")
     except Exception as e:
+        logger.error("text_edit: error writing %s: %s", file_path, e)
         return f"Error writing file: {e}"
 
     return (
@@ -174,14 +182,18 @@ def insert_after_exact(file_path: str, anchor_text: str, new_text: str) -> str:
     try:
         abs_path, content = _read_validated_file(file_path)
     except FileValidationError as e:
+        logger.error("text_edit: file validation error in %s: %s", file_path, e)
         return f"Error: {e}"
     except (FileNotFoundError, IsADirectoryError) as e:
+        logger.error("text_edit: file not found or is directory in %s: %s", file_path, e)
         return f"Error: {e}"
     except Exception as e:
+        logger.error("text_edit: unexpected error reading %s: %s", file_path, e)
         return f"Error reading file: {e}"
 
     idx, err = _locate_exact(content, anchor_text, "anchor_text")
     if err:
+        logger.error("text_edit: locate error in %s: %s", file_path, err)
         return err
 
     insert_pos = idx + len(anchor_text)
@@ -189,6 +201,7 @@ def insert_after_exact(file_path: str, anchor_text: str, new_text: str) -> str:
     try:
         abs_path.write_text(new_content, encoding="utf-8")
     except Exception as e:
+        logger.error("text_edit: error writing %s: %s", file_path, e)
         return f"Error writing file: {e}"
 
     return (
@@ -225,20 +238,25 @@ def insert_before_exact(file_path: str, anchor_text: str, new_text: str) -> str:
     try:
         abs_path, content = _read_validated_file(file_path)
     except FileValidationError as e:
+        logger.error("text_edit: file validation error in %s: %s", file_path, e)
         return f"Error: {e}"
     except (FileNotFoundError, IsADirectoryError) as e:
+        logger.error("text_edit: file not found or is directory in %s: %s", file_path, e)
         return f"Error: {e}"
     except Exception as e:
+        logger.error("text_edit: unexpected error reading %s: %s", file_path, e)
         return f"Error reading file: {e}"
 
     idx, err = _locate_exact(content, anchor_text, "anchor_text")
     if err:
+        logger.error("text_edit: locate error in %s: %s", file_path, err)
         return err
 
     new_content = content[:idx] + new_text + content[idx:]
     try:
         abs_path.write_text(new_content, encoding="utf-8")
     except Exception as e:
+        logger.error("text_edit: error writing %s: %s", file_path, e)
         return f"Error writing file: {e}"
 
     return (
