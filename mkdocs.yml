@@ -1,0 +1,57 @@
+site_name: Tokuye
+site_description: AI-powered development assistant agent that works alongside you like a friend
+site_url: https://ken11.github.io/tokuye/
+repo_url: https://github.com/ken11/tokuye
+repo_name: ken11/tokuye
+
+theme:
+  name: material
+  palette:
+    scheme: slate
+    primary: indigo
+    accent: indigo
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.highlight
+    - search.share
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Prerequisites: getting-started/prerequisites.md
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quickstart.md
+  - Configuration:
+    - Project Config: configuration/project-config.md
+    - Global Config: configuration/global-config.md
+    - Phase-Based Model Switching: configuration/phase-model.md
+    - MCP Support: configuration/mcp.md
+  - Features:
+    - TUI Interface: features/tui.md
+    - Repository Analysis: features/repository-analysis.md
+    - State Machine Mode: features/state-machine-mode.md
+    - Issue Management: features/issue-management.md
+  - Advanced:
+    - CLI Usage & Exclusions: advanced/usage.md
+    - Custom System Prompt: advanced/custom-prompt.md
+  - Philosophy: philosophy.md
+  - Roadmap: roadmap.md
+  - Contributing: contributing.md
