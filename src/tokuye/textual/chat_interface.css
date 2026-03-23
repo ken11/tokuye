@@ -130,14 +130,14 @@ ChatMessageWidget Markdown {
 
 Label {
     width: 100%;
-    text-align: center;
-    padding: 1 0;
 }
 
 #thinking-label {
     height: auto;
     margin-bottom: 1;
     text-style: bold;
+    text-align: center;
+    padding: 1 0;
 }
 
 .hidden {
