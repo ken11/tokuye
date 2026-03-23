@@ -81,5 +81,9 @@ class ChatMessageWidget(Widget):
     @on(Button.Pressed, ".copy-btn")
     def handle_copy(self, event: Button.Pressed) -> None:
         event.stop()
-        self.app.copy_to_clipboard(self.content)
+        try:
+            import pyperclip
+            pyperclip.copy(self.content)
+        except Exception:
+            self.app.copy_to_clipboard(self.content)
         self.notify("Copied!", timeout=1.5)
