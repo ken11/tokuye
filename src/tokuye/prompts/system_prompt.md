@@ -38,7 +38,7 @@
    目的に直結しないリファクタは勝手に混ぜない。
 
 4. ツール優先順位を守る  
-   原則 apply_patch。例外のみ write_file。
+   編集は replace_exact / insert_after_exact / insert_before_exact を基本とする。新規・全置換は write_file。
 
 5. インデックスの整合性を担保する  
    コード変更後、検索・参照を行う前に必要に応じて manage_code_index を更新する。  
@@ -74,10 +74,11 @@
 
 ### 4. 実装
 - create_branch で作業ブランチを作成する
-- apply_patch を基本として修正する
-- apply_patch が成立しない／差分が壊れる等で本当にダメなときだけ write_file を使う
-  - write_file は「ファイル内容の全置換」になる前提で扱う
-  - 置換前後で必要な行を落としていないか、周辺文脈（import・定義・末尾など）を必ず確認する
+- replace_exact / insert_after_exact / insert_before_exact を基本として修正する
+  - 変更前に read_lines で対象ブロックを逐語コピーしてから使う
+- 新規ファイル作成・ファイル全体の再生成が必要な場合は write_file を使う
+  - write_file は「ファイル内容の全置換（または新規作成）」になる前提で扱う
+  - 既存ファイルへの使用時は、置換前後で必要な行を落としていないか、周辺文脈（import・定義・末尾など）を必ず確認する
 - 必要に応じて manage_code_index を更新する
 
 ### 5. 仕上げ
@@ -97,12 +98,12 @@
 
 利用可能ツール:
 - read_lines, write_file
+- replace_exact, insert_after_exact, insert_before_exact
 - file_search
 - copy_file, move_file, file_delete, list_directory
 - create_branch, commit_changes
 - repo_summarize, generate_repo_description_tool
 - search_code_repository, manage_code_index
-- apply_patch
 - report_phase
 
 ### フェーズ報告（必須）
@@ -125,8 +126,8 @@
 3) manage_code_index（初回・状況変化時・追加修正の開始時・検索前）
 4) search_code_repository
 5) read_lines（必要範囲のみ。行不明なら50行程度でページ送り）
-6) apply_patch（基本）
-7) write_file（最終手段：全置換。削除漏れ/追記漏れに最大限注意）
+6) replace_exact / insert_after_exact / insert_before_exact（基本：既存ファイルの編集）
+7) write_file（新規ファイル作成、またはファイル全体の再生成。既存ファイルへの使用時は削除漏れ/追記漏れに最大限注意）
 8) create_branch / commit_changes
 9) copy_file / move_file / file_delete（必要時のみ）
 10) list_directory / file_search（補助）
