@@ -336,3 +336,45 @@ def _is_path_ignored(root: Path, abs_path: Path) -> bool:
     Check if path is ignored by git (wrapper for _is_ignored_by_git).
     """
     return _is_ignored_by_git(root, abs_path)
+
+
+@tool(
+    name="create_new_file",
+    description=(
+        "Create a new file with the given content. "
+        "Fails with 'Error: file already exists' if the file already exists — "
+        "use this tool only for brand-new files. "
+        "Access is restricted to the directory tree under `root_dir`; "
+        "files matched by `.gitignore` are denied."
+    ),
+)
+def create_new_file(file_path: str, content: str) -> str:
+    """
+    Create a new file. Fails if the file already exists.
+
+    Args:
+        file_path: Relative path of the file to create
+        content: Text content to write
+
+    Returns:
+        Operation result message
+    """
+    root_dir = settings.project_root
+
+    try:
+        abs_path = get_validated_relative_path(root_dir, file_path)
+    except FileValidationError:
+        return f"Error: Access denied to file_path: {file_path}. Permission granted exclusively to the current working directory"
+
+    if _is_path_ignored(root_dir, abs_path):
+        return f"Error: Access denied to file_path: {file_path}. File is matched by .gitignore patterns."
+
+    if abs_path.exists():
+        return f"Error: file already exists: {file_path}"
+
+    try:
+        abs_path.parent.mkdir(parents=True, exist_ok=True)
+        abs_path.write_text(content, encoding="utf-8")
+        return f"File created successfully: {file_path}"
+    except Exception as e:
+        return f"Error: {str(e)}"

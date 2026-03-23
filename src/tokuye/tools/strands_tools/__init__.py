@@ -1,5 +1,5 @@
-from tokuye.tools.strands_tools.file_management import (copy_file, file_delete,
-                                                        file_search,
+from tokuye.tools.strands_tools.file_management import (copy_file, create_new_file,
+                                                        file_delete, file_search,
                                                         list_directory,
                                                         move_file, read_lines,
                                                         write_file)
@@ -22,6 +22,9 @@ from tokuye.tools.strands_tools.repo_summary_rag.code_index_admin_tool import \
     manage_code_index
 from tokuye.tools.strands_tools.repo_summary_rag.code_search_tool import \
     search_code_repository
+from tokuye.tools.strands_tools.text_edit_tools import (insert_after_exact,
+                                                        insert_before_exact,
+                                                        replace_exact)
 
 # from strands_tools import editor, file_read, file_write
 
@@ -36,6 +39,10 @@ all_tools = [
     move_file,
     file_delete,
     list_directory,
+    create_new_file,
+    replace_exact,
+    insert_after_exact,
+    insert_before_exact,
     create_branch,
     commit_changes,
     git_push,
@@ -78,7 +85,10 @@ planner_tools = [
 
 developer_tools = [
     read_lines,
-    apply_patch,
+    replace_exact,
+    insert_after_exact,
+    insert_before_exact,
+    create_new_file,
     create_branch,
     commit_changes,
     file_search,
