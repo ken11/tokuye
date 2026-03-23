@@ -284,13 +284,20 @@ class NodeAgents:
         self._update_token_usage(result, model_identifier=impl_identifier)
         return result
 
-    async def invoke_pr_creator(self, message: str):
+    async def invoke_pr_creator(self, message: str, issue_context: str = ""):
         """Translate Developer output first, then invoke PR Creator."""
         translated = self.translate_developer_output_for_pr_creator(message)
         self.add_system_message("[Developer output structured for PR Creator]")
         token_tracker.reset_turn()
         pr_identifier = settings.pr_model_identifier or settings.model_identifier
-        result = await self.pr_creator.invoke_async(translated)
+        if issue_context:
+            user_prompt = (
+                f"## Original Issue / Task Context\n{issue_context}\n\n"
+                f"## Implementation Summary\n{translated}"
+            )
+        else:
+            user_prompt = translated
+        result = await self.pr_creator.invoke_async(user_prompt)
         self._update_token_usage(result, model_identifier=pr_identifier)
         return result
 

@@ -192,6 +192,7 @@ class StrandsAgent:
         self._last_planner_output: str = ""
         self._last_developer_output: str = ""
         self.current_task_branch: str = ""  # ← add this line
+        self._last_issue_context: str = ""  # user instruction at PLANNING time, passed to PR Creator
 
     async def __call__(self, *args, **kwargs):
         self.set_thinking(True)
@@ -247,6 +248,7 @@ class StrandsAgent:
             result = await nodes.invoke_planner(planner_input)
             # Capture Planner output for downstream nodes
             self._last_planner_output = str(result)
+            self._last_issue_context = message
             sm.transition_after_node()  # PLANNING → AWAITING_APPROVAL
             self.add_system_message(f"[State: {sm.state.value}]")
 
@@ -289,9 +291,13 @@ class StrandsAgent:
                 if next_state == DevState.PR_CREATING and self._last_developer_output
                 else message
             )
-            result = await nodes.invoke_pr_creator(source)
+            result = await nodes.invoke_pr_creator(
+                source,
+                issue_context=self._last_issue_context if next_state == DevState.PR_CREATING else "",
+            )
             if next_state == DevState.PR_CREATING:
                 self._last_developer_output = ""  # consumed
+                self._last_issue_context = ""    # consumed
                 sm.transition_after_node()
                 self.add_system_message(f"[State: {sm.state.value}]")
             elif next_state == DevState.SELF_REVIEWING:
