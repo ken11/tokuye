@@ -32,6 +32,8 @@ class DevState(Enum):
     SELF_REVIEWING = "SELF_REVIEWING"
     REVIEWING = "REVIEWING"
     AWAITING_REVIEW_APPROVAL = "AWAITING_REVIEW_APPROVAL"
+    AWAITING_PR_FEEDBACK = "AWAITING_PR_FEEDBACK"
+    AWAITING_REVIEW_FEEDBACK = "AWAITING_REVIEW_FEEDBACK"
 
     @classmethod
     def from_str(cls, value: str) -> "DevState":
@@ -48,7 +50,7 @@ class DevState(Enum):
 _AUTO_ADVANCE: dict["DevState", "DevState"] = {
     DevState.PLANNING: DevState.AWAITING_APPROVAL,
     DevState.IMPLEMENTING: DevState.AWAITING_REVIEW,
-    DevState.PR_CREATING: DevState.IDLE,
+    DevState.PR_CREATING: DevState.AWAITING_PR_FEEDBACK,
     DevState.SELF_REVIEWING: DevState.AWAITING_REVIEW,
     DevState.REVIEWING: DevState.AWAITING_REVIEW_APPROVAL,
 }

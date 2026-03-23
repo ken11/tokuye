@@ -305,7 +305,7 @@ class StrandsAgent:
                 sm.transition_after_node()
                 self.add_system_message(f"[State: {sm.state.value}]")
 
-        elif next_state == DevState.AWAITING_REVIEW:
+        elif next_state in (DevState.AWAITING_REVIEW, DevState.AWAITING_PR_FEEDBACK, DevState.AWAITING_REVIEW_FEEDBACK):
             result = None
 
         else:

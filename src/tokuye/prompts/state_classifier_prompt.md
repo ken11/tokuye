@@ -14,6 +14,8 @@
 - `SELF_REVIEWING`: PR Creatorが自己レビュー中
 - `REVIEWING`: Reviewerが他者のPRをレビュー中
 - `AWAITING_REVIEW_APPROVAL`: Reviewerがレビュー内容を提示し、投稿前の承認を待っている
+- `AWAITING_PR_FEEDBACK`: 自分が出したPRにレビューコメントが来るのを待っている
+- `AWAITING_REVIEW_FEEDBACK`: 自分が投稿したレビューに対する返答を待っている
 
 ## 遷移ルール
 
@@ -23,6 +25,8 @@
 - 他者のPRレビュー依頼 → `REVIEWING`
 - 自己レビュー依頼（自分のコード・ブランチ・PR） → `SELF_REVIEWING`
 - PR作成依頼 → `PR_CREATING`
+- 自分のPRへのコメント確認・修正依頼 → `PLANNING`
+- 他者のPRへのコメント返答確認・追加レビュー依頼 → `REVIEWING`
 
 ### PLANNING からの遷移
 - 調査・質問が完結した（「ありがとう」「わかった」等） → `IDLE`
@@ -53,8 +57,18 @@
 - レビュー内容の提示完了 → `AWAITING_REVIEW_APPROVAL`（自動遷移）
 
 ### AWAITING_REVIEW_APPROVAL からの遷移
-- 承認・投稿指示（「投稿して」「ok」等） → `IDLE`
+- 承認・投稿指示（「投稿して」「ok」等） → `AWAITING_REVIEW_FEEDBACK`
 - 修正依頼 → `REVIEWING`
+
+### AWAITING_PR_FEEDBACK からの遷移
+- コメント確認・修正依頼（「コメント来た」「確認して」「修正して」等） → `PLANNING`
+- 完結・終了（「マージした」「ありがとう」等） → `IDLE`
+- 上記以外 → `PLANNING`
+
+### AWAITING_REVIEW_FEEDBACK からの遷移
+- コメントへの返答確認・追加レビュー依頼（「コメント来た」「確認して」「反論きた」等） → `REVIEWING`
+- 完結・終了（「ありがとう」「終わり」等） → `IDLE`
+- 上記以外 → `REVIEWING`
 
 ## 出力形式
 
