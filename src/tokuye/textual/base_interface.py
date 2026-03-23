@@ -20,9 +20,9 @@ from tokuye.utils.token_tracker import token_tracker
 from textual import on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Container, Horizontal, Vertical
+from textual.containers import Container, Horizontal, Vertical, VerticalScroll
 from textual.css.query import NoMatches
-from textual.widgets import Button, Footer, Header, Label, RichLog, TextArea
+from textual.widgets import Button, Footer, Header, Label, TextArea
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +81,7 @@ class ChatInterface(App):
         with Horizontal(id="main-container"):
             with Container(id="chat-panel"):
                 with Container(id="chat-container"):
-                    yield RichLog(id="chat-log", highlight=True, markup=True)
+                    yield VerticalScroll(id="chat-log")
                     yield Label("thinking...", id="thinking-label", classes="hidden")
 
                     with Horizontal(id="input-container"):
@@ -102,7 +102,7 @@ class ChatInterface(App):
 
     def on_mount(self) -> None:
         self.theme = settings.theme
-        chat_log: RichLog = self.query_one("#chat-log", RichLog)
+        chat_log = self.query_one("#chat-log", VerticalScroll)
         unified_panel = self.query_one("#unified-panel", UnifiedSidePanelDisplay)
 
         root_logger = logging.getLogger()
@@ -117,7 +117,7 @@ class ChatInterface(App):
         sys.stdout = self.stdout_redirector
 
         for message in self.messages:
-            chat_log.write(message.to_rich())
+            chat_log.mount(message.to_widget())
 
         self.query_one("#message-input", TextArea).focus()
 
@@ -168,8 +168,9 @@ class ChatInterface(App):
         self.on_message(message)
 
     def action_reset_conversation(self) -> None:
-        chat_log = self.query_one("#chat-log", RichLog)
-        chat_log.clear()
+        chat_log = self.query_one("#chat-log", VerticalScroll)
+        for child in list(chat_log.children):
+            child.remove()
 
         system_message = None
         for msg in self.messages:
@@ -184,7 +185,7 @@ class ChatInterface(App):
 
         if system_message:
             self.messages.append(system_message)
-            chat_log.write(system_message.to_rich())
+            chat_log.mount(system_message.to_widget())
 
         self.thread_id = str(uuid.uuid4())
         self.agent = StrandsAgent(
@@ -315,8 +316,8 @@ class ChatInterface(App):
         message = ChatMessage(content, is_user=True)
         self.messages.append(message)
 
-        chat_log = self.query_one("#chat-log", RichLog)
-        chat_log.write(message.to_rich())
+        chat_log = self.query_one("#chat-log", VerticalScroll)
+        chat_log.mount(message.to_widget())
 
         chat_log.scroll_end(animate=False)
 
@@ -324,8 +325,8 @@ class ChatInterface(App):
         message = ChatMessage(content, is_user=False)
         self.messages.append(message)
 
-        chat_log = self.query_one("#chat-log", RichLog)
-        chat_log.write(message.to_rich())
+        chat_log = self.query_one("#chat-log", VerticalScroll)
+        chat_log.mount(message.to_widget())
 
         chat_log.scroll_end(animate=False)
 
@@ -333,8 +334,8 @@ class ChatInterface(App):
         message = ChatMessage(content, is_user=False, is_system=True)
         self.messages.append(message)
 
-        chat_log = self.query_one("#chat-log", RichLog)
-        chat_log.write(message.to_rich())
+        chat_log = self.query_one("#chat-log", VerticalScroll)
+        chat_log.mount(message.to_widget())
 
         chat_log.scroll_end(animate=False)
 

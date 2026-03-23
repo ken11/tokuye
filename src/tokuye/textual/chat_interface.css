@@ -99,6 +99,35 @@ Header {
     border-top: solid $primary;
 }
 
+ChatMessageWidget {
+    width: 100%;
+    height: auto;
+    padding: 1 2;
+    border-title-align: left;
+    margin-bottom: 1;
+}
+
+ChatMessageWidget Markdown {
+    width: 100%;
+    height: auto;
+    background: transparent;
+}
+
+.copy-btn {
+    dock: right;
+    width: 3;
+    height: 1;
+    border: none;
+    background: transparent;
+    color: $text-muted;
+    min-width: 3;
+}
+
+.copy-btn:hover {
+    color: $text;
+    background: $boost;
+}
+
 Label {
     width: 100%;
     text-align: center;
