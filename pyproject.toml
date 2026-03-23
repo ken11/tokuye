@@ -48,6 +48,9 @@ dev = [
     "pytest>=9.0.2",
     "ruff>=0.1.0",
 ]
+docs = [
+    "mkdocs-material>=9.0.0",
+]
 
 [project.scripts]
 tokuye = "tokuye.main:cli"
