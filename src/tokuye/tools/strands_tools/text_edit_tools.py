@@ -18,6 +18,7 @@ Failure messages are intentionally specific to aid retry:
 
 import logging
 from pathlib import Path
+from typing import Tuple
 
 from strands import tool
 from tokuye.tools.strands_tools.utils import (
@@ -30,15 +31,11 @@ from tokuye.utils.config import settings
 logger = logging.getLogger(__name__)
 
 
-def _read_file(abs_path: Path) -> str:
-    return abs_path.read_text(encoding="utf-8")
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
 
-
-def _write_file(abs_path: Path, content: str) -> None:
-    abs_path.write_text(content, encoding="utf-8")
-
-
-def _validate_path(file_path: str):
+def _validate_path(file_path: str) -> Path:
     """Validate path is within root and not gitignored. Returns abs_path or raises."""
     root_dir = settings.project_root
     try:
@@ -55,6 +52,51 @@ def _validate_path(file_path: str):
         )
     return abs_path
 
+
+def _read_validated_file(file_path: str) -> Tuple[Path, str]:
+    """Validate path and read file content. Returns (abs_path, content) or raises."""
+    abs_path = _validate_path(file_path)
+    if not abs_path.exists():
+        raise FileNotFoundError(f"file not found: {file_path}")
+    if abs_path.is_dir():
+        raise IsADirectoryError(f"{file_path} is a directory")
+    content = abs_path.read_text(encoding="utf-8")
+    return abs_path, content
+
+
+def _locate_exact(content: str, search_text: str, label: str) -> Tuple[int, str]:
+    """
+    Find search_text in content, enforcing exactly one match.
+
+    Returns (start_index, "") on success.
+    Returns (-1, error_message) on failure.
+
+    label is used in error messages ("old_text" or "anchor_text").
+    """
+    if not search_text:
+        return -1, (
+            f"Error: {label} must not be empty"
+        )
+
+    count = content.count(search_text)
+    if count == 0:
+        return -1, (
+            f"Error: {label} not found. "
+            "Re-read the target block with read_lines and copy it verbatim. "
+            "Whitespace or line ending differences may be the cause."
+        )
+    if count > 1:
+        return -1, (
+            f"Error: {label} matched multiple locations ({count}). "
+            "Extend the text to include more surrounding lines to make it unambiguous."
+        )
+
+    return content.index(search_text), ""
+
+
+# ---------------------------------------------------------------------------
+# Tools
+# ---------------------------------------------------------------------------
 
 @tool(
     name="replace_exact",
@@ -79,29 +121,21 @@ def replace_exact(file_path: str, old_text: str, new_text: str) -> str:
         Success or failure message
     """
     try:
-        abs_path = _validate_path(file_path)
+        abs_path, content = _read_validated_file(file_path)
     except FileValidationError as e:
         return f"Error: {e}"
-
-    if not abs_path.exists():
-        return f"Error: file not found: {file_path}"
-    if abs_path.is_dir():
-        return f"Error: {file_path} is a directory"
-
-    try:
-        content = _read_file(abs_path)
+    except (FileNotFoundError, IsADirectoryError) as e:
+        return f"Error: {e}"
     except Exception as e:
         return f"Error reading file: {e}"
 
-    count = content.count(old_text)
-    if count == 0:
-        return "Error: old_text not found"
-    if count > 1:
-        return f"Error: multiple matches ({count}) — make old_text longer to be unambiguous"
+    idx, err = _locate_exact(content, old_text, "old_text")
+    if err:
+        return err
 
-    new_content = content.replace(old_text, new_text, 1)
+    new_content = content[:idx] + new_text + content[idx + len(old_text):]
     try:
-        _write_file(abs_path, new_content)
+        abs_path.write_text(new_content, encoding="utf-8")
     except Exception as e:
         return f"Error writing file: {e}"
 
@@ -130,30 +164,22 @@ def insert_after_exact(file_path: str, anchor_text: str, new_text: str) -> str:
         Success or failure message
     """
     try:
-        abs_path = _validate_path(file_path)
+        abs_path, content = _read_validated_file(file_path)
     except FileValidationError as e:
         return f"Error: {e}"
-
-    if not abs_path.exists():
-        return f"Error: file not found: {file_path}"
-    if abs_path.is_dir():
-        return f"Error: {file_path} is a directory"
-
-    try:
-        content = _read_file(abs_path)
+    except (FileNotFoundError, IsADirectoryError) as e:
+        return f"Error: {e}"
     except Exception as e:
         return f"Error reading file: {e}"
 
-    count = content.count(anchor_text)
-    if count == 0:
-        return "Error: anchor not found"
-    if count > 1:
-        return f"Error: anchor matched multiple locations ({count}) — make anchor_text longer to be unambiguous"
+    idx, err = _locate_exact(content, anchor_text, "anchor_text")
+    if err:
+        return err
 
-    insert_pos = content.index(anchor_text) + len(anchor_text)
+    insert_pos = idx + len(anchor_text)
     new_content = content[:insert_pos] + new_text + content[insert_pos:]
     try:
-        _write_file(abs_path, new_content)
+        abs_path.write_text(new_content, encoding="utf-8")
     except Exception as e:
         return f"Error writing file: {e}"
 
@@ -182,30 +208,21 @@ def insert_before_exact(file_path: str, anchor_text: str, new_text: str) -> str:
         Success or failure message
     """
     try:
-        abs_path = _validate_path(file_path)
+        abs_path, content = _read_validated_file(file_path)
     except FileValidationError as e:
         return f"Error: {e}"
-
-    if not abs_path.exists():
-        return f"Error: file not found: {file_path}"
-    if abs_path.is_dir():
-        return f"Error: {file_path} is a directory"
-
-    try:
-        content = _read_file(abs_path)
+    except (FileNotFoundError, IsADirectoryError) as e:
+        return f"Error: {e}"
     except Exception as e:
         return f"Error reading file: {e}"
 
-    count = content.count(anchor_text)
-    if count == 0:
-        return "Error: anchor not found"
-    if count > 1:
-        return f"Error: anchor matched multiple locations ({count}) — make anchor_text longer to be unambiguous"
+    idx, err = _locate_exact(content, anchor_text, "anchor_text")
+    if err:
+        return err
 
-    insert_pos = content.index(anchor_text)
-    new_content = content[:insert_pos] + new_text + content[insert_pos:]
+    new_content = content[:idx] + new_text + content[idx:]
     try:
-        _write_file(abs_path, new_content)
+        abs_path.write_text(new_content, encoding="utf-8")
     except Exception as e:
         return f"Error writing file: {e}"
 
