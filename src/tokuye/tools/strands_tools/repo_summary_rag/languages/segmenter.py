@@ -12,7 +12,7 @@ from typing import List, Tuple
 
 try:
     from tree_sitter import Parser  # type: ignore
-    from tree_sitter_languages import get_language  # type: ignore
+    from tree_sitter_language_pack import get_language  # type: ignore
 
     TS_AVAILABLE = True
 except Exception:  # pragma: no cover
@@ -58,8 +58,8 @@ class TreeSitterSegmenter(CodeSegmenter):
         super().__init__(code)
         if not TS_AVAILABLE:
             raise ImportError(
-                "tree_sitter / tree_sitter_languages required. "
-                "pip install tree-sitter tree-sitter-languages"
+                "tree_sitter / tree_sitter_language_pack required. "
+                "pip install tree-sitter tree-sitter-language-pack"
             )
         self._parser = Parser()
         self._parser.set_language(get_language(self.get_ts_language_name()))
