@@ -91,7 +91,7 @@ state_machine_mode: true
 bedrock_model_id: global.anthropic.claude-sonnet-4-6
 
 # Developer node — use a code-focused model (optional)
-bedrock_impl_model_id: mistral.mistral-small-2503-v1:0
+bedrock_impl_model_id: mistral.devstral-2-123b
 
 # State Classifier — use a lightweight model (optional)
 bedrock_classifier_model_id: global.anthropic.claude-haiku-4-5-20251001-v1:0

@@ -14,7 +14,7 @@ bedrock_model_id: global.anthropic.claude-sonnet-4-6
 bedrock_embedding_model_id: amazon.titan-embed-text-v2:0
 model_temperature: 0.2
 pr_branch_prefix: tokuye/
-strands_session_dir: sessions
+strands_session_dir: .tokuye/sessions
 name: Alice
 EOF
 
