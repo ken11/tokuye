@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from xml.sax.saxutils import escape as xml_escape
 
-import chardet
+from charset_normalizer import from_bytes
 from pathspec import PathSpec
 from strands import tool
 from tokuye.tools.strands_tools.utils import (_check_ignored_batch,
@@ -76,8 +76,8 @@ def is_binary(path: Path, sample_size: int = 2048) -> bool:
         return True
     if b"\x00" in raw:
         return True
-    detected = chardet.detect(raw)
-    return detected["encoding"] is None
+    result = from_bytes(raw).best()
+    return result is None
 
 
 def load_summary_ignore(repo_root: Path) -> List[str]:
