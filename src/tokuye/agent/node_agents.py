@@ -35,7 +35,7 @@ from strands.agent.conversation_manager import SummarizingConversationManager
 from strands.models import BedrockModel
 from strands.session.file_session_manager import FileSessionManager
 
-from tokuye.mcp import MCPClientManager
+from tokuye.mcp_manager import MCPClientManager
 from tokuye.prompts.prompt_loader import load_prompt, load_prompt_if_exists
 from tokuye.tools.strands_tools import (
     developer_tools,

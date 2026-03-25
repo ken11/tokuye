@@ -9,7 +9,7 @@ from strands.models import BedrockModel
 from strands.session.file_session_manager import FileSessionManager
 from tokuye.agent.node_agents import NodeAgents
 from tokuye.agent.state_machine import DevState, StateClassifier, StateMachine
-from tokuye.mcp import MCPClientManager
+from tokuye.mcp_manager import MCPClientManager
 from tokuye.prompts.prompt_loader import (load_custom_system_prompt,
                                           load_prompt, load_prompt_if_exists)
 from tokuye.tools.strands_tools import all_tools

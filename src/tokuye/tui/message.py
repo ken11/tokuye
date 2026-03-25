@@ -1,4 +1,4 @@
-from tokuye.textual.widgets import ChatMessageWidget
+from tokuye.tui.widgets import ChatMessageWidget
 
 
 class ChatMessage:

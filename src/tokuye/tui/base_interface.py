@@ -10,10 +10,10 @@ from strands.types.exceptions import (ContextWindowOverflowException,
                                       MaxTokensReachedException,
                                       ModelThrottledException)
 from tokuye.agent.strands_agent import MaxStepsException, StrandsAgent
-from tokuye.textual.message import ChatMessage
-from tokuye.textual.utils import (StdoutRedirector, TextualLogHandler,
-                                  get_log_level_from_string)
-from tokuye.textual.widgets import MessageInput, UnifiedSidePanelDisplay
+from tokuye.tui.message import ChatMessage
+from tokuye.tui.utils import (StdoutRedirector, TextualLogHandler,
+                               get_log_level_from_string)
+from tokuye.tui.widgets import MessageInput, UnifiedSidePanelDisplay
 from tokuye.utils.config import settings
 from tokuye.utils.token_tracker import token_tracker
 

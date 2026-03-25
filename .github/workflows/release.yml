@@ -42,6 +42,19 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install ccache
 
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: ccache-${{ matrix.os }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ matrix.os }}-
+
+      - name: Configure ccache
+        run: |
+          ccache --max-size=500M
+          ccache --zero-stats
+
       - name: Install uv
         uses: astral-sh/setup-uv@v5
 
@@ -49,31 +62,30 @@ jobs:
         run: uv sync --all-extras
 
       - name: Build binary with Nuitka
+        env:
+          CCACHE_DIR: ~/.ccache
+          CC: ccache gcc
+          CXX: ccache g++
         run: |
           uv run python -m nuitka \
             --mode=onefile \
             --follow-imports \
             --include-package=tokuye \
-            --include-package=strands_agents \
-            --include-package=strands_agents_tools \
-            --include-package=boto3 \
             --include-package=botocore \
-            --include-package=faiss \
-            --include-package=tree_sitter \
-            --include-package=tree_sitter_language_pack \
-            --include-package=textual \
-            --include-package=pydantic \
-            --include-package=pydantic_settings \
+            --include-package=rich._unicode_data \
             --include-package-data=tokuye \
-            --include-package-data=strands_agents \
-            --include-package-data=textual \
-            --include-package-data=botocore \
             --output-filename=tokuye \
             --output-dir=dist \
             src/tokuye/main.py
 
+      - name: Show ccache stats
+        run: ccache --show-stats
+
       - name: Rename artifact
         run: mv dist/tokuye dist/${{ matrix.artifact_name }}
+
+      - name: Smoke test
+        run: dist/${{ matrix.artifact_name }} --help
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -94,12 +106,27 @@ jobs:
         with:
           path: dist/
 
+      - name: Generate checksums
+        run: |
+          cd dist
+          for f in \
+            tokuye-linux-x86_64/tokuye-linux-x86_64 \
+            tokuye-linux-arm64/tokuye-linux-arm64 \
+            tokuye-darwin-x86_64/tokuye-darwin-x86_64 \
+            tokuye-darwin-arm64/tokuye-darwin-arm64; do
+            sha256sum "$f" | awk '{print $1}' > "${f}.sha256"
+          done
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             dist/tokuye-linux-x86_64/tokuye-linux-x86_64
+            dist/tokuye-linux-x86_64/tokuye-linux-x86_64.sha256
             dist/tokuye-linux-arm64/tokuye-linux-arm64
+            dist/tokuye-linux-arm64/tokuye-linux-arm64.sha256
             dist/tokuye-darwin-x86_64/tokuye-darwin-x86_64
+            dist/tokuye-darwin-x86_64/tokuye-darwin-x86_64.sha256
             dist/tokuye-darwin-arm64/tokuye-darwin-arm64
+            dist/tokuye-darwin-arm64/tokuye-darwin-arm64.sha256
           generate_release_notes: true
