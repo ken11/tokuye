@@ -30,7 +30,7 @@ EOF
 
 # 3. Run in any project
 cd /path/to/your/project
-tokuye --project-root .
+tokuye --project-root /path/to/your/project
 ```
 
 ## Prerequisites

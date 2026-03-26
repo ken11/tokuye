@@ -48,6 +48,7 @@ bedrock_model_id: global.anthropic.claude-sonnet-4-6
 bedrock_embedding_model_id: amazon.titan-embed-text-v2:0
 model_temperature: 0.2
 pr_branch_prefix: tokuye/
+strands_session_dir: ~/.config/tokuye/sessions
 name: Alice
 EOF
 ```
@@ -56,7 +57,7 @@ Then run Tokuye in any project:
 
 ```bash
 cd /path/to/your/project
-tokuye --project-root .
+tokuye --project-root /path/to/your/project
 ```
 
 See [Global Configuration](../configuration/global-config.md) for all available options.
@@ -75,12 +76,13 @@ bedrock_model_id: global.anthropic.claude-sonnet-4-6
 bedrock_embedding_model_id: amazon.titan-embed-text-v2:0
 model_temperature: 0.2
 pr_branch_prefix: tokuye/
+strands_session_dir: ~/.config/tokuye/sessions
 name: Alice
 EOF
 
 # Run directly from GitHub in any project
 cd /path/to/your/project
-uvx --from git+https://github.com/ken11/tokuye.git tokuye --project-root .
+uvx --from git+https://github.com/ken11/tokuye.git tokuye --project-root /path/to/your/project
 ```
 
 ## Install as a Tool
