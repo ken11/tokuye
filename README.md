@@ -15,9 +15,11 @@ Full documentation including configuration, features, and advanced usage is avai
 ## Quick Start
 
 ```bash
-cd /path/to/your/project
-mkdir -p .tokuye
+# 1. Install (macOS / Linux)
+curl -fsSL https://raw.githubusercontent.com/ken11/tokuye/main/install.sh | sh
 
+# 2. Create config
+mkdir -p .tokuye
 cat > .tokuye/config.yaml << EOF
 bedrock_model_id: global.anthropic.claude-sonnet-4-6
 bedrock_embedding_model_id: amazon.titan-embed-text-v2:0
@@ -27,22 +29,24 @@ strands_session_dir: sessions
 name: Alice
 EOF
 
-uvx --from git+https://github.com/ken11/tokuye.git tokuye --project-root .
+# 3. Run
+tokuye --project-root .
 ```
 
 ## Prerequisites
 
 - **AWS Bedrock Access**: IAM credentials with Bedrock permissions
-- **Python**: 3.10 or higher
-- **uv**: Fast Python package installer ([installation guide](https://docs.astral.sh/uv/getting-started/installation/))
 
 ## Installation
 
 ```bash
-# Run directly (no install)
+# macOS / Linux — pre-built binary (recommended)
+curl -fsSL https://raw.githubusercontent.com/ken11/tokuye/main/install.sh | sh
+
+# Run directly via uvx (no install, requires uv)
 uvx --from git+https://github.com/ken11/tokuye.git tokuye --project-root /path/to/your/project
 
-# Or install globally
+# Install globally via uv tool (requires uv)
 uv tool install git+https://github.com/ken11/tokuye.git
 tokuye --project-root /path/to/your/project
 ```
