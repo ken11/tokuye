@@ -123,7 +123,6 @@ else
   echo "bedrock_embedding_model_id: amazon.titan-embed-text-v2:0"
   echo "model_temperature: 0.2"
   echo "pr_branch_prefix: tokuye/"
-  echo "strands_session_dir: ~/.config/tokuye/sessions"
   echo "name: Alice"
   echo "EOF"
 fi
