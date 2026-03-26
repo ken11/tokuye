@@ -57,7 +57,7 @@ class Settings(BaseSettings):
 
     system_prompt_markdown_path: Optional[str] = ""
 
-    strands_session_dir: str = "sessions"
+    strands_session_dir: str = ".tokuye/sessions"
 
     class Config:
         env_file = ".env"

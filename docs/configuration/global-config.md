@@ -23,6 +23,7 @@ mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/tokuye"
 # Create the global config
 cat > "${XDG_CONFIG_HOME:-$HOME/.config}/tokuye/config.yaml" << 'EOF'
 bedrock_model_id: global.anthropic.claude-sonnet-4-6
+bedrock_embedding_model_id: amazon.titan-embed-text-v2:0
 model_temperature: 0.2
 name: Alice
 
