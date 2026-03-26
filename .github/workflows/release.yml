@@ -27,9 +27,6 @@ jobs:
           - os: macos-15
             artifact_name: tokuye-darwin-arm64
             binary_name: tokuye
-          - os: windows-2025
-            artifact_name: tokuye-windows-x86_64.exe
-            binary_name: tokuye.exe
 
     runs-on: ${{ matrix.os }}
 
@@ -68,7 +65,6 @@ jobs:
         run: |
           uv run python -m nuitka \
             --mode=onefile \
-            --follow-imports \
             --include-package=tokuye \
             --include-package-data=tokuye \
             --include-package-data=botocore \
@@ -78,14 +74,8 @@ jobs:
             --output-dir=dist \
             src/tokuye/main.py
 
-      - name: Rename artifact (Unix)
-        if: runner.os != 'Windows'
+      - name: Rename artifact
         run: mv dist/${{ matrix.binary_name }} dist/${{ matrix.artifact_name }}
-
-      - name: Rename artifact (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: Move-Item "dist\\${{ matrix.binary_name }}" "dist\\${{ matrix.artifact_name }}"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -113,8 +103,7 @@ jobs:
             tokuye-linux-x86_64/tokuye-linux-x86_64 \
             tokuye-linux-arm64/tokuye-linux-arm64 \
             tokuye-darwin-x86_64/tokuye-darwin-x86_64 \
-            tokuye-darwin-arm64/tokuye-darwin-arm64 \
-            tokuye-windows-x86_64.exe/tokuye-windows-x86_64.exe; do
+            tokuye-darwin-arm64/tokuye-darwin-arm64; do
             sha256sum "$f" > "${f}.sha256"
           done
 
@@ -130,6 +119,4 @@ jobs:
             dist/tokuye-darwin-x86_64/tokuye-darwin-x86_64.sha256
             dist/tokuye-darwin-arm64/tokuye-darwin-arm64
             dist/tokuye-darwin-arm64/tokuye-darwin-arm64.sha256
-            dist/tokuye-windows-x86_64.exe/tokuye-windows-x86_64.exe
-            dist/tokuye-windows-x86_64.exe/tokuye-windows-x86_64.exe.sha256
           generate_release_notes: true
