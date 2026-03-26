@@ -3,7 +3,6 @@ set -euo pipefail
 
 REPO="ken11/tokuye"
 BINARY_NAME="tokuye"
-INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
 
 # ---- detect OS and arch ----
 OS="$(uname -s)"
@@ -36,6 +35,16 @@ case "$ARCH" in
     ;;
 esac
 
+# ---- resolve install dir ----
+if [ -n "${INSTALL_DIR:-}" ]; then
+  # User-specified: use as-is
+  :
+elif [ "$OS_NAME" = "darwin" ] && [ -d "/usr/local/bin" ] && [ -w "/usr/local/bin" ]; then
+  INSTALL_DIR="/usr/local/bin"
+else
+  INSTALL_DIR="$HOME/.local/bin"
+fi
+
 ASSET_NAME="${BINARY_NAME}-${OS_NAME}-${ARCH_NAME}"
 
 # ---- resolve version ----
@@ -55,7 +64,7 @@ fi
 
 DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${TAG}/${ASSET_NAME}"
 
-echo "Installing tokuye ${TAG} (${OS_NAME}/${ARCH_NAME})..."
+echo "Installing tokuye ${TAG} (${OS_NAME}/${ARCH_NAME}) to ${INSTALL_DIR}..."
 
 # ---- download ----
 TMP_FILE="$(mktemp)"
@@ -76,7 +85,7 @@ mv "$TMP_FILE" "${INSTALL_DIR}/${BINARY_NAME}"
 chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
 
 echo ""
-echo "tokuye has been installed to: ${INSTALL_DIR}/${BINARY_NAME}"
+echo "✓ tokuye has been installed to: ${INSTALL_DIR}/${BINARY_NAME}"
 
 # ---- PATH hint ----
 case ":${PATH}:" in
@@ -87,9 +96,41 @@ case ":${PATH}:" in
     echo "NOTE: ${INSTALL_DIR} is not in your PATH."
     echo "Add the following line to your shell profile (~/.bashrc, ~/.zshrc, etc.):"
     echo ""
-    echo "  export PATH=\"\$HOME/.local/bin:\$PATH\""
+    echo "  export PATH=\"${INSTALL_DIR}:\$PATH\""
     ;;
 esac
 
+# ---- global config hint ----
+GLOBAL_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/tokuye"
+GLOBAL_CONFIG_FILE="${GLOBAL_CONFIG_DIR}/config.yaml"
+
 echo ""
-echo "Run 'tokuye --help' to get started."
+echo "─────────────────────────────────────────────"
+echo " Next step: create your global config"
+echo "─────────────────────────────────────────────"
+
+if [ -f "$GLOBAL_CONFIG_FILE" ]; then
+  echo ""
+  echo "Global config already exists at: ${GLOBAL_CONFIG_FILE}"
+  echo "Skip creation, or edit it manually."
+else
+  echo ""
+  echo "Run the following to create a global config:"
+  echo ""
+  echo "  mkdir -p \"${GLOBAL_CONFIG_DIR}\""
+  echo "  cat > \"${GLOBAL_CONFIG_FILE}\" << 'EOF'"
+  echo "bedrock_model_id: global.anthropic.claude-sonnet-4-6"
+  echo "bedrock_embedding_model_id: amazon.titan-embed-text-v2:0"
+  echo "model_temperature: 0.2"
+  echo "pr_branch_prefix: tokuye/"
+  echo "strands_session_dir: ~/.config/tokuye/sessions"
+  echo "name: Alice"
+  echo "EOF"
+fi
+
+echo ""
+echo "Once configured, run tokuye in any project:"
+echo ""
+echo "  cd /path/to/your/project"
+echo "  tokuye --project-root /path/to/your/project"
+echo ""
