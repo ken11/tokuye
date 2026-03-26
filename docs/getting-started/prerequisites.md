@@ -1,8 +1,6 @@
 # Prerequisites
 
-## Required
-
-### AWS Bedrock Access
+## AWS Bedrock Access
 
 Tokuye uses AWS Bedrock exclusively for LLM and embedding models. You need:
 
@@ -21,22 +19,20 @@ export AWS_DEFAULT_REGION=ap-northeast-1
 export AWS_PROFILE=your_profile
 ```
 
-### Python
+## Python / uv (Binary install では不要)
 
-Python 3.10 or higher is required.
+If you install Tokuye via the **binary installer** (`install.sh`), Python and uv are **not required**.
 
-### uv
-
-Tokuye uses [uv](https://docs.astral.sh/uv/) as its package manager.
+Python 3.10+ and [uv](https://docs.astral.sh/uv/) are only needed if you use `uvx` or `uv tool install`:
 
 ```bash
-# Install uv
+# Install uv (only if using uvx / uv tool)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-### gh CLI (optional but recommended)
+## gh CLI (optional but recommended)
 
-The [GitHub CLI](https://cli.github.com/) (`gh`) is required for PR creation, review, and issue operations.
+The [GitHub CLI](https://cli.github.com/) (`gh`) enables GitHub-integrated operations such as creating PRs, reviewing PRs, and browsing Issues directly from Tokuye. Without it, these features are unavailable.
 
 ```bash
 # macOS

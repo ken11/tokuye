@@ -43,22 +43,26 @@ Tokuye is an AI-powered development assistant that understands your entire proje
 
 ## Quick Start
 
-After installing, create a config and run:
+After installing, set up AWS credentials, create a global config, and run:
 
 ```bash
-cd /path/to/your/project
-mkdir -p .tokuye
+# Set up AWS credentials (choose one)
+export AWS_ACCESS_KEY_ID=your_key
+export AWS_SECRET_ACCESS_KEY=your_secret
+export AWS_DEFAULT_REGION=ap-northeast-1
+# or: export AWS_PROFILE=your_profile
 
-cat > .tokuye/config.yaml << EOF
+# Create global config (once — applies to all projects)
+mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/tokuye"
+cat > "${XDG_CONFIG_HOME:-$HOME/.config}/tokuye/config.yaml" << 'EOF'
 bedrock_model_id: global.anthropic.claude-sonnet-4-6
 bedrock_embedding_model_id: amazon.titan-embed-text-v2:0
 model_temperature: 0.2
 pr_branch_prefix: tokuye/
-strands_session_dir: .tokuye/sessions
 name: Alice
 EOF
 
-tokuye --project-root .
+tokuye --project-root /path/to/your/project
 ```
 
 → See [Quick Start](getting-started/quickstart.md) for full details.

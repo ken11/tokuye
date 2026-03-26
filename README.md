@@ -18,7 +18,13 @@ Full documentation including configuration, features, and advanced usage is avai
 # 1. Install (macOS / Linux)
 curl -fsSL https://raw.githubusercontent.com/ken11/tokuye/main/install.sh | sh
 
-# 2. Create global config (once, applies to all projects)
+# 2. Set up AWS credentials (choose one)
+export AWS_ACCESS_KEY_ID=your_key
+export AWS_SECRET_ACCESS_KEY=your_secret
+export AWS_DEFAULT_REGION=ap-northeast-1
+# or: export AWS_PROFILE=your_profile
+
+# 3. Create global config (once, applies to all projects)
 mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/tokuye"
 cat > "${XDG_CONFIG_HOME:-$HOME/.config}/tokuye/config.yaml" << 'EOF'
 bedrock_model_id: global.anthropic.claude-sonnet-4-6
@@ -28,8 +34,7 @@ pr_branch_prefix: tokuye/
 name: Alice
 EOF
 
-# 3. Run in any project
-cd /path/to/your/project
+# 4. Run in any project
 tokuye --project-root /path/to/your/project
 ```
 
