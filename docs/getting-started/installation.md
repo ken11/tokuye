@@ -1,6 +1,36 @@
 # Installation
 
-## Quick Start with uvx (Recommended)
+## Binary Install (macOS / Linux)
+
+The easiest way to install Tokuye. Downloads a pre-built binary — no Python or uv required.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ken11/tokuye/main/install.sh | sh
+```
+
+The script auto-detects your OS and architecture (`darwin/linux` × `x86_64/arm64`) and installs the binary to `~/.local/bin/tokuye`.
+
+**Install a specific version:**
+
+```bash
+VERSION=v0.1.0 curl -fsSL https://raw.githubusercontent.com/ken11/tokuye/main/install.sh | sh
+```
+
+**Install to a custom directory:**
+
+```bash
+INSTALL_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/ken11/tokuye/main/install.sh | sh
+```
+
+!!! note "PATH"
+    If `~/.local/bin` is not in your `PATH`, the script will print a reminder. Add the following to your shell profile (`~/.zshrc`, `~/.bashrc`, etc.):
+    ```bash
+    export PATH="$HOME/.local/bin:$PATH"
+    ```
+
+---
+
+## Quick Start with uvx (No Install)
 
 Run Tokuye directly without installation:
 

@@ -8,8 +8,8 @@ theme:
   name: material
   palette:
     scheme: slate
-    primary: indigo
-    accent: indigo
+    primary: light blue
+    accent: amber
   features:
     - navigation.tabs
     - navigation.sections

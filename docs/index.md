@@ -17,7 +17,33 @@ Tokuye is an AI-powered development assistant that understands your entire proje
 - **MCP Support**: Extend capabilities via external MCP servers
 - **State Machine Mode**: Structured multi-agent workflow (Planner → Developer → PR Creator → Reviewer)
 
+## Install
+
+=== "macOS / Linux (Recommended)"
+
+    ```bash
+    curl -fsSL https://raw.githubusercontent.com/ken11/tokuye/main/install.sh | sh
+    ```
+
+    This downloads the pre-built binary for your platform and installs it to `~/.local/bin`.
+
+=== "uvx (no install)"
+
+    ```bash
+    uvx --from git+https://github.com/ken11/tokuye.git tokuye --project-root .
+    ```
+
+=== "uv tool"
+
+    ```bash
+    uv tool install git+https://github.com/ken11/tokuye.git
+    ```
+
+→ See [Installation](getting-started/installation.md) for all options and details.
+
 ## Quick Start
+
+After installing, create a config and run:
 
 ```bash
 cd /path/to/your/project
@@ -32,10 +58,10 @@ strands_session_dir: .tokuye/sessions
 name: Alice
 EOF
 
-uvx --from git+https://github.com/ken11/tokuye.git tokuye --project-root .
+tokuye --project-root .
 ```
 
-→ See [Installation](getting-started/installation.md) and [Quick Start](getting-started/quickstart.md) for full details.
+→ See [Quick Start](getting-started/quickstart.md) for full details.
 
 ## Documentation
 
