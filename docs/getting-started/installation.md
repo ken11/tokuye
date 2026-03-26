@@ -8,7 +8,14 @@ The easiest way to install Tokuye. Downloads a pre-built binary — no Python or
 curl -fsSL https://raw.githubusercontent.com/ken11/tokuye/main/install.sh | sh
 ```
 
-The script auto-detects your OS and architecture (`darwin/linux` × `x86_64/arm64`) and installs the binary to `~/.local/bin/tokuye`.
+The script auto-detects your OS and architecture (`darwin/linux` × `x86_64/arm64`).
+
+**Default install location:**
+
+| OS | Path |
+|----|------|
+| macOS (writable `/usr/local/bin`) | `/usr/local/bin/tokuye` |
+| macOS (fallback) / Linux | `~/.local/bin/tokuye` |
 
 **Install a specific version:**
 
@@ -23,10 +30,36 @@ INSTALL_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/ken11/to
 ```
 
 !!! note "PATH"
-    If `~/.local/bin` is not in your `PATH`, the script will print a reminder. Add the following to your shell profile (`~/.zshrc`, `~/.bashrc`, etc.):
+    If the install directory is not in your `PATH`, the script will print a reminder.
+    For `~/.local/bin`, add the following to your shell profile (`~/.zshrc`, `~/.bashrc`, etc.):
     ```bash
     export PATH="$HOME/.local/bin:$PATH"
     ```
+
+## After Installation: Create a Global Config
+
+The install script will print the exact commands, but here they are for reference.
+This only needs to be done **once** — the config applies to all your projects.
+
+```bash
+mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/tokuye"
+cat > "${XDG_CONFIG_HOME:-$HOME/.config}/tokuye/config.yaml" << 'EOF'
+bedrock_model_id: global.anthropic.claude-sonnet-4-6
+bedrock_embedding_model_id: amazon.titan-embed-text-v2:0
+model_temperature: 0.2
+pr_branch_prefix: tokuye/
+name: Alice
+EOF
+```
+
+Then run Tokuye in any project:
+
+```bash
+cd /path/to/your/project
+tokuye --project-root .
+```
+
+See [Global Configuration](../configuration/global-config.md) for all available options.
 
 ---
 
@@ -35,23 +68,19 @@ INSTALL_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/ken11/to
 Run Tokuye directly without installation:
 
 ```bash
-cd /path/to/your/project
-
-# Create config directory
-mkdir -p .tokuye
-
-# Create config file
-cat > .tokuye/config.yaml << EOF
+# Create global config (once)
+mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/tokuye"
+cat > "${XDG_CONFIG_HOME:-$HOME/.config}/tokuye/config.yaml" << 'EOF'
 bedrock_model_id: global.anthropic.claude-sonnet-4-6
 bedrock_embedding_model_id: amazon.titan-embed-text-v2:0
 model_temperature: 0.2
 pr_branch_prefix: tokuye/
-strands_session_dir: .tokuye/sessions
 name: Alice
 EOF
 
-# Run directly from GitHub
-uvx --from git+https://github.com/ken11/tokuye.git tokuye --project-root /path/to/your/project
+# Run directly from GitHub in any project
+cd /path/to/your/project
+uvx --from git+https://github.com/ken11/tokuye.git tokuye --project-root .
 ```
 
 ## Install as a Tool

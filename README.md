@@ -18,18 +18,18 @@ Full documentation including configuration, features, and advanced usage is avai
 # 1. Install (macOS / Linux)
 curl -fsSL https://raw.githubusercontent.com/ken11/tokuye/main/install.sh | sh
 
-# 2. Create config
-mkdir -p .tokuye
-cat > .tokuye/config.yaml << EOF
+# 2. Create global config (once, applies to all projects)
+mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/tokuye"
+cat > "${XDG_CONFIG_HOME:-$HOME/.config}/tokuye/config.yaml" << 'EOF'
 bedrock_model_id: global.anthropic.claude-sonnet-4-6
 bedrock_embedding_model_id: amazon.titan-embed-text-v2:0
 model_temperature: 0.2
 pr_branch_prefix: tokuye/
-strands_session_dir: sessions
 name: Alice
 EOF
 
-# 3. Run
+# 3. Run in any project
+cd /path/to/your/project
 tokuye --project-root .
 ```
 
