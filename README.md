@@ -40,15 +40,7 @@ tokuye --project-root /path/to/your/project
 ## Installation
 
 ```bash
-# macOS / Linux — pre-built binary (recommended)
 curl -fsSL https://raw.githubusercontent.com/ken11/tokuye/main/install.sh | sh
-
-# Run directly via uvx (no install, requires uv)
-uvx --from git+https://github.com/ken11/tokuye.git tokuye --project-root /path/to/your/project
-
-# Install globally via uv tool (requires uv)
-uv tool install git+https://github.com/ken11/tokuye.git
-tokuye --project-root /path/to/your/project
 ```
 
 ## Contributing
