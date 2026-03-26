@@ -68,7 +68,7 @@ jobs:
             --include-package=tokuye \
             --include-package-data=tokuye \
             --include-package-data=botocore \
-            --include-module=rich._unicode_data \
+            --include-package=rich._unicode_data \
             --assume-yes-for-downloads \
             --output-filename=tokuye \
             --output-dir=dist \
