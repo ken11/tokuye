@@ -64,6 +64,7 @@ jobs:
         run: uv sync --all-extras --frozen
 
       - name: Build binary with Nuitka
+        shell: bash
         run: |
           uv run python -m nuitka \
             --mode=onefile \
