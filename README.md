@@ -1,5 +1,7 @@
 # Tokuye
 
+https://github.com/user-attachments/assets/846b294d-b540-4220-8394-c0a9cb63984c
+
 **Tokuye** (トクイェ) is an AI-powered development assistant agent that works alongside you like a friend. The name comes from the Ainu word meaning "friend" — reflecting our goal of creating a companion that supports your development journey.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
