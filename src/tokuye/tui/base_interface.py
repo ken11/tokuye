@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import signal
@@ -167,7 +168,8 @@ class ChatInterface(App):
         self.add_user_message(message)
         self.on_message(message)
 
-    def action_reset_conversation(self) -> None:
+    @work
+    async def action_reset_conversation(self) -> None:
         chat_log = self.query_one("#chat-log", VerticalScroll)
         for child in list(chat_log.children):
             child.remove()
@@ -188,18 +190,23 @@ class ChatInterface(App):
             chat_log.mount(system_message.to_widget())
 
         self.thread_id = str(uuid.uuid4())
-        self.agent = StrandsAgent(
-            thread_id=self.thread_id,
-            max_steps=self.current_max_steps,
-            add_ai_message=lambda msg: self.call_later(self.add_ai_message, msg),
-            add_system_message=lambda msg: self.call_later(
-                self.add_system_message, msg
-            ),
-            set_thinking=lambda flg: self.call_later(self.set_thinking, flg),
-            update_token_usage=lambda txt: self.call_later(
-                self.update_token_usage, txt
-            ),
+        thread_id = self.thread_id
+        current_max_steps = self.current_max_steps
+        new_agent = await asyncio.to_thread(
+            lambda: StrandsAgent(
+                thread_id=thread_id,
+                max_steps=current_max_steps,
+                add_ai_message=lambda msg: self.call_later(self.add_ai_message, msg),
+                add_system_message=lambda msg: self.call_later(
+                    self.add_system_message, msg
+                ),
+                set_thinking=lambda flg: self.call_later(self.set_thinking, flg),
+                update_token_usage=lambda txt: self.call_later(
+                    self.update_token_usage, txt
+                ),
+            )
         )
+        self.agent = new_agent
 
         self.waiting_for_resume = False
         t = self.query_one("#message-input", TextArea)
