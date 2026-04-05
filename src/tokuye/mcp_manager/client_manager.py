@@ -5,6 +5,7 @@ Manages lifecycle of MCP clients configured in .tokuye/config.yaml.
 Supports SSE and stdio transport types.
 """
 
+import asyncio
 import logging
 from typing import List
 
@@ -114,6 +115,9 @@ class MCPClientManager:
             f"MCP client manager started: {len(self._clients)}/{len(self.configs)} servers connected"
         )
 
+    async def start_async(self) -> None:
+        await asyncio.to_thread(self.start)
+
     def get_tools(self) -> list:
         """Get all tools from connected MCP servers.
 
@@ -132,6 +136,9 @@ class MCPClientManager:
                 logger.warning(f"Failed to list tools from MCP server: {e}")
         return tools
 
+    async def get_tools_async(self) -> list:
+        return await asyncio.to_thread(self.get_tools)
+
     def stop(self) -> None:
         """Stop all MCP client connections."""
         for client in self._clients:
@@ -143,3 +150,6 @@ class MCPClientManager:
         self._clients.clear()
         self._started = False
         logger.info("MCP client manager stopped")
+
+    async def stop_async(self) -> None:
+        await asyncio.to_thread(self.stop)

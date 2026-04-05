@@ -143,17 +143,19 @@ class ChatInterface(App):
         self.exit()
 
     def on_exit(self):
-        # Clean up MCP connections
-        if hasattr(self, 'agent') and self.agent:
-            self.agent.cleanup()
         print("\nExiting application...")
+
+    async def on_unmount(self) -> None:
+        # Clean up MCP connections when the app is torn down
+        if hasattr(self, 'agent') and self.agent:
+            await self.agent.cleanup()
         sys.exit(0)
 
     def exit(self) -> None:
         if self.stdout_redirector:
             sys.stdout = self.stdout_redirector.old_stdout
         self.on_exit()
-        self.app.exit()
+        super().exit()
 
     def action_send_message(self) -> None:
         input_widget = self.query_one("#message-input", TextArea)
@@ -162,12 +164,13 @@ class ChatInterface(App):
         if not message:
             return
 
-        input_widget.text = ""
+        input_widget.load_text("")
 
         self.add_user_message(message)
         self.on_message(message)
 
-    def action_reset_conversation(self) -> None:
+    @work
+    async def action_reset_conversation(self) -> None:
         chat_log = self.query_one("#chat-log", VerticalScroll)
         for child in list(chat_log.children):
             child.remove()
@@ -181,7 +184,7 @@ class ChatInterface(App):
         self.messages.clear()
 
         # Clean up old agent's MCP connections before creating new one
-        self.agent.cleanup()
+        await self.agent.cleanup()
 
         if system_message:
             self.messages.append(system_message)
@@ -310,7 +313,7 @@ class ChatInterface(App):
         with open(issue_file_path, "r", encoding="utf-8") as f:
             issue_content = f.read()
 
-        input_widget.text = issue_content
+        input_widget.load_text(issue_content)
 
     def add_user_message(self, content: str) -> None:
         message = ChatMessage(content, is_user=True)

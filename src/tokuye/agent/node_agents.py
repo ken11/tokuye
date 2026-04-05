@@ -35,7 +35,6 @@ from strands.agent.conversation_manager import SummarizingConversationManager
 from strands.models import BedrockModel
 from strands.session.file_session_manager import FileSessionManager
 
-from tokuye.mcp_manager import MCPClientManager
 from tokuye.prompts.prompt_loader import load_prompt, load_prompt_if_exists
 from tokuye.tools.strands_tools import (
     developer_tools,
@@ -77,7 +76,7 @@ class NodeAgents:
         add_system_message,
         set_thinking,
         update_token_usage,
-        mcp_manager: MCPClientManager,
+        mcp_tools: list,
     ) -> None:
         self.add_ai_message = add_ai_message
         self.add_system_message = add_system_message
@@ -97,8 +96,7 @@ class NodeAgents:
             else load_prompt_if_exists("summary_prompt_en.md")
         )
 
-        # MCP tools (appended to each node's tool list)
-        mcp_tools = mcp_manager.get_tools()
+        # MCP tools (appended to each node's tool list) — passed in from caller
         if mcp_tools:
             logger.info("NodeAgents: loaded %d MCP tools", len(mcp_tools))
 

@@ -133,16 +133,50 @@ class StrandsAgent:
             session_id=thread_id, storage_dir=self.session_dir
         )
 
-        # Initialize MCP clients
+        # Save for deferred use in _init_mcp_and_build_agent
+        self.initial_model = initial_model
+        self._thread_id = thread_id
+
+        # MCP manager — actual start/get_tools is deferred to _init_mcp_and_build_agent()
         self.mcp_manager = MCPClientManager(settings.mcp_servers)
-        self.mcp_manager.start()
-        mcp_tools = self.mcp_manager.get_tools()
+
+        # Agent and state machine are built lazily on first __call__
+        self.agent = None
+        self.max_steps = max_steps
+        self.step_count = 0
+        self._cleaned_up = False
+        self._mcp_initialized = False
+
+        # --- v2: state machine mode --------------------------------------
+        self._state_machine = None
+        self._node_agents = None
+
+        # Buffers to carry outputs between nodes (v2 only)
+        self._last_planner_output: str = ""
+        self._last_developer_output: str = ""
+        self.current_task_branch: str = ""
+        self._last_issue_context: str = ""  # user instruction at PLANNING time, passed to PR Creator
+
+    async def _init_mcp_and_build_agent(self) -> None:
+        """Async initialisation: start MCP clients, fetch tools, build Agent and NodeAgents.
+
+        Called once on the first __call__ invocation so that the heavy I/O
+        (MCP server connections) runs inside the event loop instead of blocking
+        the synchronous __init__.
+        """
+        if self._mcp_initialized:
+            return
+
+        # --- MCP start + tool discovery ----------------------------------
+        await self.mcp_manager.start_async()
+        mcp_tools = await self.mcp_manager.get_tools_async()
         if mcp_tools:
             logger.info(f"Loaded {len(mcp_tools)} tools from MCP servers")
         combined_tools = list(all_tools) + mcp_tools
 
+        # --- Build Strands Agent (v1) ------------------------------------
         self.agent = Agent(
-            model=initial_model,
+            model=self.initial_model,
             tools=combined_tools,
             system_prompt=self.system_prompt,
             session_manager=self.session_manager,
@@ -151,11 +185,8 @@ class StrandsAgent:
             ),
             callback_handler=self._callback_handler,
         )
-        self.max_steps = max_steps
-        self.step_count = 0
-        self._cleaned_up = False
 
-        # --- v2: state machine mode --------------------------------------
+        # --- Build state machine + NodeAgents (v2) -----------------------
         if settings.state_machine_mode:
             classifier_model_id = (
                 settings.bedrock_classifier_model_id or settings.bedrock_model_id
@@ -172,29 +203,24 @@ class StrandsAgent:
             self._state_classifier = StateClassifier(classifier_model)
             self._state_machine = StateMachine(self._state_classifier)
             self._node_agents = NodeAgents(
-                thread_id=thread_id,
-                add_ai_message=add_ai_message,
-                add_system_message=add_system_message,
-                set_thinking=set_thinking,
-                update_token_usage=update_token_usage,
-                mcp_manager=self.mcp_manager,
+                thread_id=self._thread_id,
+                add_ai_message=self.add_ai_message,
+                add_system_message=self.add_system_message,
+                set_thinking=self.set_thinking,
+                update_token_usage=self.update_token_usage,
+                mcp_tools=mcp_tools,
             )
             logger.info(
                 "State machine mode enabled: classifier=%s, impl=%s",
                 classifier_model_id,
                 settings.bedrock_impl_model_id or settings.bedrock_model_id,
             )
-        else:
-            self._state_machine = None
-            self._node_agents = None
 
-        # Buffers to carry outputs between nodes (v2 only)
-        self._last_planner_output: str = ""
-        self._last_developer_output: str = ""
-        self.current_task_branch: str = ""  # ← add this line
-        self._last_issue_context: str = ""  # user instruction at PLANNING time, passed to PR Creator
+        self._mcp_initialized = True
 
     async def __call__(self, *args, **kwargs):
+        if not self._mcp_initialized:
+            await self._init_mcp_and_build_agent()
         self.set_thinking(True)
         try:
             if settings.state_machine_mode:
@@ -355,11 +381,11 @@ class StrandsAgent:
         turn_usage_summary = token_tracker.format_usage_summary()
         self.update_token_usage(turn_usage_summary)
 
-    def cleanup(self):
+    async def cleanup(self):
         """Clean up MCP client connections."""
         if self._cleaned_up:
             return
         self._cleaned_up = True
         if self.mcp_manager:
-            self.mcp_manager.stop()
+            await self.mcp_manager.stop_async()
             logger.info("MCP clients cleaned up")
