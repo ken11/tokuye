@@ -162,7 +162,7 @@ class ChatInterface(App):
         if not message:
             return
 
-        input_widget.text = ""
+        input_widget.load_text("")
 
         self.add_user_message(message)
         self.on_message(message)
@@ -310,7 +310,7 @@ class ChatInterface(App):
         with open(issue_file_path, "r", encoding="utf-8") as f:
             issue_content = f.read()
 
-        input_widget.text = issue_content
+        input_widget.load_text(issue_content)
 
     def add_user_message(self, content: str) -> None:
         message = ChatMessage(content, is_user=True)
