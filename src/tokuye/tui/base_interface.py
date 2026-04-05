@@ -149,13 +149,13 @@ class ChatInterface(App):
         # Clean up MCP connections when the app is torn down
         if hasattr(self, 'agent') and self.agent:
             await self.agent.cleanup()
+        sys.exit(0)
 
     def exit(self) -> None:
         if self.stdout_redirector:
             sys.stdout = self.stdout_redirector.old_stdout
         self.on_exit()
-        self.app.exit()
-        sys.exit(0)
+        super().exit()
 
     def action_send_message(self) -> None:
         input_widget = self.query_one("#message-input", TextArea)
