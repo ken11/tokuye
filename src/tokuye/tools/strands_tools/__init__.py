@@ -6,12 +6,14 @@ from tokuye.tools.strands_tools.file_management import (copy_file, create_new_fi
 from tokuye.tools.strands_tools.git_tools import commit_changes, create_branch, git_push
 from tokuye.tools.strands_tools.patch_tools import apply_patch
 from tokuye.tools.strands_tools.phase_tool import report_phase
+from tokuye.tools.strands_tools.planning_result_tool import report_planning_result
 from tokuye.tools.strands_tools.pr_review_tools import (pr_diff, pr_list,
                                                         pr_review_comment,
                                                         pr_review_submit,
                                                         pr_view,
                                                         pr_get_comments)
 from tokuye.tools.strands_tools.pr_create_tool import submit_pull_request
+from tokuye.tools.strands_tools.pr_result_tool import report_pr_result
 from tokuye.tools.strands_tools.issue_tools import (issue_list,
                                                     issue_view,
                                                     issue_get_comments)
@@ -62,6 +64,8 @@ all_tools = [
     issue_get_comments,
     submit_issue,
     report_phase,
+    report_planning_result,
+    report_pr_result,
 ]
 
 # ---------------------------------------------------------------------------
@@ -82,6 +86,7 @@ planner_tools = [
     issue_view,
     issue_get_comments,
     submit_issue,
+    report_planning_result,
 ]
 
 developer_tools = [
@@ -108,6 +113,7 @@ pr_creator_tools = [
     pr_list,
     pr_view,
     pr_diff,
+    report_pr_result,
 ]
 
 reviewer_tools = [

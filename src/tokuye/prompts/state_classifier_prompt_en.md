@@ -17,6 +17,7 @@ You receive the current state and the user's message, and return the next state.
 - `AWAITING_REVIEW_APPROVAL`: Reviewer has presented review content and is waiting for approval before posting.
 - `AWAITING_PR_FEEDBACK`: Waiting for review comments on a PR you submitted
 - `AWAITING_REVIEW_FEEDBACK`: Waiting for a response to a review you posted
+- `AWAITING_USER_RESPONSE`: Planner has completed a non-plan task (research, Q&A, etc.) and is waiting for the user's next instruction.
 
 ## Transition rules
 
@@ -34,6 +35,16 @@ You receive the current state and the user's message, and return the next state.
 - Investigation / question is resolved ("thanks", "got it", etc.) → `IDLE`
 - Other (follow-up questions, additional investigation, clarification, etc.) → `PLANNING`
 - Note: transition to `AWAITING_APPROVAL` after plan presentation is handled automatically by the system
+
+### From AWAITING_USER_RESPONSE
+- Follow-up questions, additional investigation, clarification, etc. → `PLANNING`
+- Implementation request ("implement it", "do it", etc.) → `IMPLEMENTING`
+- PR creation request ("create a PR", "submit it", etc.) → `PR_CREATING`
+- Self-review request ("do a self review", "review before submitting", etc.) → `SELF_REVIEWING`
+- Request to review someone else's PR → `REVIEWING`
+- Request to create an Issue (e.g. "create an issue", "file a bug report issue") → `ISSUE_CREATING`
+- Completion / closure ("thanks", "this is fine", etc.) → `IDLE`
+- Anything else → `PLANNING`
 
 ### From AWAITING_APPROVAL
 - Approval / agreement ("ok", "yes", "go ahead", "approved", "please proceed", etc.) → `IMPLEMENTING`
@@ -62,6 +73,7 @@ You receive the current state and the user's message, and return the next state.
 ### From AWAITING_REVIEW_APPROVAL
 - Approval / post instruction ("post it", "ok", etc.) → `AWAITING_REVIEW_FEEDBACK`
 - Revision request → `REVIEWING`
+- Cancel / abort → `IDLE`
 
 ### From AWAITING_PR_FEEDBACK
 - Comment received / fix requested ("comment came in", "please check", "please fix", etc.) → `PLANNING`

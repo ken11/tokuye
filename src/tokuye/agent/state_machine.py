@@ -35,6 +35,7 @@ class DevState(Enum):
     AWAITING_PR_FEEDBACK = "AWAITING_PR_FEEDBACK"
     AWAITING_REVIEW_FEEDBACK = "AWAITING_REVIEW_FEEDBACK"
     ISSUE_CREATING = "ISSUE_CREATING"
+    AWAITING_USER_RESPONSE = "AWAITING_USER_RESPONSE"
 
     @classmethod
     def from_str(cls, value: str) -> "DevState":
@@ -49,9 +50,7 @@ class DevState(Enum):
 # When the current state is one of these, the classifier is skipped and the
 # state advances automatically after the node finishes.
 _AUTO_ADVANCE: dict["DevState", "DevState"] = {
-    DevState.PLANNING: DevState.AWAITING_APPROVAL,
     DevState.IMPLEMENTING: DevState.AWAITING_REVIEW,
-    DevState.PR_CREATING: DevState.AWAITING_PR_FEEDBACK,
     DevState.SELF_REVIEWING: DevState.AWAITING_REVIEW,
     DevState.REVIEWING: DevState.AWAITING_REVIEW_APPROVAL,
     DevState.ISSUE_CREATING: DevState.IDLE,
@@ -151,5 +150,33 @@ class StateMachine:
         self.state = next_state
         return self.state
 
-    def reset(self) -> None:
+    def transition_after_planning(self, result_type: str) -> DevState:
+        """Transition after the PLANNING state based on the result type.
+        
+        Args:
+            result_type: The type of result, either "plan" or "response".
+        
+        Returns:
+            The new state after transition.
+        """
+        if result_type == "plan":
+            self.state = DevState.AWAITING_APPROVAL
+        else:
+            self.state = DevState.AWAITING_USER_RESPONSE
+        return self.state
+
+    def transition_after_pr_creating(self, has_issue: bool) -> DevState:
+        """Transition after the PR_CREATING state based on the result.
+        
+        Args:
+            has_issue: Whether there was an issue during PR creation.
+        
+        Returns:
+            The new state after transition.
+        """
+        if has_issue:
+            self.state = DevState.PLANNING
+        else:
+            self.state = DevState.AWAITING_PR_FEEDBACK
+        return self.state    def reset(self) -> None:
         self.state = DevState.IDLE

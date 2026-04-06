@@ -53,3 +53,9 @@ Available tools:
 
 1. Do not cut corners on the PR description. Make it clear enough for reviewers to understand the context.
 2. Do not perform self-review superficially. Actually read the diff.
+## report_pr_result tool usage rules
+
+- When PR creation completes with no issues: call `report_pr_result(has_issue=False)` at the end.
+- When a bug or problem is detected: call `report_pr_result(has_issue=True)` at the end.
+
+This tool is used to control state transitions.

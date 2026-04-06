@@ -17,6 +17,7 @@
 - `AWAITING_REVIEW_APPROVAL`: Reviewerがレビュー内容を提示し、投稿前の承認を待っている
 - `AWAITING_PR_FEEDBACK`: 自分が出したPRにレビューコメントが来るのを待っている
 - `AWAITING_REVIEW_FEEDBACK`: 自分が投稿したレビューに対する返答を待っている
+- `AWAITING_USER_RESPONSE`: Plannerが調査・質問・その他計画以外のタスクを完了し、ユーザーの次の指示を待っている
 
 ## 遷移ルール
 
@@ -34,6 +35,16 @@
 - 調査・質問が完結した（「ありがとう」「わかった」等） → `IDLE`
 - その他（追加質問・調査依頼・補足等） → `PLANNING`
 - ※ 計画提示後の `AWAITING_APPROVAL` への遷移はシステムが自動で行う
+
+### AWAITING_USER_RESPONSE からの遷移
+- 追加質問・調査依頼・補足等 → `PLANNING`
+- 実装依頼（「実装して」「やって」等） → `IMPLEMENTING`
+- PR作成依頼（「PR作って」「出して」等） → `PR_CREATING`
+- 自己レビュー依頼（「self reviewして」「レビューしてから出して」等） → `SELF_REVIEWING`
+- 他者のPRレビュー依頼 → `REVIEWING`
+- Issue作成依頼（「Issueを作って」「バグ報告のIssueを立てて」等） → `ISSUE_CREATING`
+- 完結・終了（「ありがとう」「これでいい」等） → `IDLE`
+- 上記以外 → `PLANNING`
 
 ### AWAITING_APPROVAL からの遷移
 - 承認・同意（「ok」「いいよ」「進めて」「承認」「よろしく」等） → `IMPLEMENTING`
@@ -62,6 +73,7 @@
 ### AWAITING_REVIEW_APPROVAL からの遷移
 - 承認・投稿指示（「投稿して」「ok」等） → `AWAITING_REVIEW_FEEDBACK`
 - 修正依頼 → `REVIEWING`
+- キャンセル・中断 → `IDLE`
 
 ### AWAITING_PR_FEEDBACK からの遷移
 - コメント確認・修正依頼（「コメント来た」「確認して」「修正して」等） → `PLANNING`

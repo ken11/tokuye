@@ -14,6 +14,12 @@ from tokuye.prompts.prompt_loader import (load_custom_system_prompt,
                                           load_prompt, load_prompt_if_exists)
 from tokuye.tools.strands_tools import all_tools
 from tokuye.tools.strands_tools.phase_tool import configure_phase_models
+from tokuye.tools.strands_tools.planning_result_tool import (
+    get_last_planning_result, reset_last_planning_result
+)
+from tokuye.tools.strands_tools.pr_result_tool import (
+    get_last_pr_result, reset_last_pr_result
+)
 from tokuye.utils.config import settings
 from tokuye.utils.token_tracker import token_tracker
 
@@ -275,11 +281,15 @@ class StrandsAgent:
             # Capture Planner output for downstream nodes
             self._last_planner_output = str(result)
             self._last_issue_context = message
-            sm.transition_after_node()  # PLANNING → AWAITING_APPROVAL
+            sm.transition_after_planning(get_last_planning_result())
+            reset_last_planning_result()
             self.add_system_message(f"[State: {sm.state.value}]")
 
         elif next_state == DevState.AWAITING_APPROVAL:
             # Planner has already presented the plan; just wait for user approval.
+            # No node invocation needed.
+            result = None        elif next_state == DevState.AWAITING_USER_RESPONSE:
+            # Planner has completed a non-plan task (research, Q&A, etc.) and is waiting for the user's next instruction.
             # No node invocation needed.
             result = None
 
@@ -322,7 +332,8 @@ class StrandsAgent:
             )
             self._last_developer_output = ""  # consumed
             self._last_issue_context = ""    # consumed
-            sm.transition_after_node()
+            sm.transition_after_pr_creating(get_last_pr_result())
+            reset_last_pr_result()
             self.add_system_message(f"[State: {sm.state.value}]")
 
         elif next_state == DevState.ISSUE_CREATING:
