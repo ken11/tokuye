@@ -140,7 +140,9 @@ class StateMachine:
         """Classify user message and advance state. Returns the new state."""
         next_state = await self._classifier.classify(self.state, user_message)
         self.state = next_state
-        return self.state    async def transition_by_node_output(self, user_message: str, node_output: str) -> DevState:
+        return self.state
+
+    async def transition_by_node_output(self, user_message: str, node_output: str) -> DevState:
         """Classify based on node output and advance state. Returns the new state."""
         next_state = await self._classifier.classify(self.state, user_message, node_output)
         self.state = next_state
