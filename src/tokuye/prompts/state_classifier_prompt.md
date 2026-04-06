@@ -34,12 +34,19 @@
 - 調査・質問が完結した（「ありがとう」「わかった」等） → `IDLE`
 - 実装計画・修正計画を提示した後、ユーザーが承認・同意（「ok」「いいよ」「進めて」「承認」「よろしく」等） → `AWAITING_APPROVAL`
 - 実装計画・修正計画を提示した後、ユーザーが修正・見直しを依頼 → `PLANNING`
+- 自己レビュー依頼（「self reviewして」「レビューしてから出して」等） → `SELF_REVIEWING`
+- PR作成依頼（「PR作って」「出して」等） → `PR_CREATING`
+- Issue作成依頼（「Issueを作って」「バグ報告のIssueを立てて」等） → `ISSUE_CREATING`
+- 他者のPRレビュー依頼 → `REVIEWING`
 - その他（追加質問・調査依頼・補足等） → `PLANNING`
 - ※ `AWAITING_APPROVAL` への遷移はユーザーの承認発言を受けてここで判断する（システム自動遷移は行わない）
 
 ### AWAITING_APPROVAL からの遷移
 - 承認・同意（「ok」「いいよ」「進めて」「承認」「よろしく」等） → `IMPLEMENTING`
 - 計画の修正・見直し依頼 → `PLANNING`
+- 自己レビュー依頼（「self reviewして」「レビューしてから出して」等） → `SELF_REVIEWING`
+- PR作成依頼（「PR作って」「出して」等） → `PR_CREATING`
+- Issue作成依頼（「Issueを作って」「バグ報告のIssueを立てて」等） → `ISSUE_CREATING`
 - キャンセル・中断 → `IDLE`
 
 ### IMPLEMENTING からの遷移
