@@ -16,7 +16,7 @@ def submit_issue(title: str, body: str, labels: str = "", assignees: str = "") -
     Returns:
         Issue URL on success, error message on failure
     """
-    cmd = ["gh", "issue", "create", "--title", title, "--body", body]
+    cmd = ["issue", "create", "--title", title, "--body", body]
 
     if labels:
         for label in labels.split(","):
