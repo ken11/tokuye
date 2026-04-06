@@ -85,6 +85,15 @@ You receive the current state and the user's message, and return the next state.
 ### Transitions from ISSUE_CREATING
 - Issue creation completion reported → `IDLE` (automatic transition)
 
+## When node output is provided
+
+When a "Node output" field is provided, prioritize the node output content
+(not just the user message) to determine the next state.
+
+- Contains an implementation plan or revision plan → `AWAITING_APPROVAL`
+- Contains only investigation results or answers to questions → `IDLE` (if conversation is complete) or `PLANNING` (if continuation is needed)
+- Reports Issue creation complete → `IDLE`
+
 ## Output format
 
 Return only the next state as JSON. No explanation needed.

@@ -275,9 +275,8 @@ class StrandsAgent:
             # Capture Planner output for downstream nodes
             self._last_planner_output = str(result)
             self._last_issue_context = message
-            # NOTE: PLANNING → AWAITING_APPROVAL への自動遷移は行わない。
-            # 次のユーザー発言を StateClassifier が判断して遷移させる。
-            # （調査・質問回答の場合は PLANNING のまま継続するため）
+            await sm.transition_by_node_output(message or "", self._last_planner_output)
+            self.add_system_message(f"[State: {sm.state.value}]")
 
         elif next_state == DevState.AWAITING_APPROVAL:
             # Planner has already presented the plan; just wait for user approval.
