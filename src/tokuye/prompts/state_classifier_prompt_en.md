@@ -32,12 +32,21 @@ You receive the current state and the user's message, and return the next state.
 
 ### From PLANNING
 - Investigation / question is resolved ("thanks", "got it", etc.) → `IDLE`
+- After presenting an implementation / revision plan, user approves ("ok", "yes", "go ahead", "approved", "please proceed", etc.) → `AWAITING_APPROVAL`
+- After presenting an implementation / revision plan, user requests changes or revision → `PLANNING`
+- Self-review request ("do a self review", "review before submitting", etc.) → `SELF_REVIEWING`
+- PR creation request ("create a PR", "submit it", etc.) → `PR_CREATING`
+- Request to create an Issue ("create an issue", "file a bug report issue", etc.) → `ISSUE_CREATING`
+- Request to review someone else's PR → `REVIEWING`
 - Other (follow-up questions, additional investigation, clarification, etc.) → `PLANNING`
-- Note: transition to `AWAITING_APPROVAL` after plan presentation is handled automatically by the system
+- Note: transition to `AWAITING_APPROVAL` is determined here based on the user's approval message (no automatic system transition)
 
 ### From AWAITING_APPROVAL
 - Approval / agreement ("ok", "yes", "go ahead", "approved", "please proceed", etc.) → `IMPLEMENTING`
 - Request to revise / reconsider the plan → `PLANNING`
+- Self-review request ("do a self review", "review before submitting", etc.) → `SELF_REVIEWING`
+- PR creation request ("create a PR", "submit it", etc.) → `PR_CREATING`
+- Request to create an Issue ("create an issue", "file a bug report issue", etc.) → `ISSUE_CREATING`
 - Cancel / abort → `IDLE`
 
 ### From IMPLEMENTING
