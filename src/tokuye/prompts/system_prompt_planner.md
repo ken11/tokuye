@@ -53,8 +53,41 @@
 
 ### 3. ユーザー承認待ち
 - 計画提示後、ユーザーの反応を待つ
-- 承認されたら「実装計画」をそのまま出力して終了する（Developer に渡す）
+- 承認されたら、ステップ4に進む
 - 修正を求められたら計画を修正して再提示する
+
+### 4. Developer 向け指示書の生成（承認後のみ実行）
+- 承認された計画をもとに、Developer（Devstral）向けの英語指示書を生成して出力する
+- 以下のフォーマットで出力すること。前置きや後書きは一切不要。
+
+```
+## Task
+(One sentence: what needs to be done and why)
+
+## Project Root
+{project_root}
+
+## Steps
+(Numbered list. Each step must include ALL of the following:
+  - Exact file path relative to project root
+  - What to change: add / remove / replace — be specific about content
+  - Any constraint or warning for that step)
+
+## Branch
+(If a specific branch name is given in the plan, write: "Use existing branch: <name>. Do NOT call create_branch."
+ Otherwise, write: "Create a new work branch with create_branch.")
+
+## Commit Message
+(Suggest a concise commit message that describes the change)
+
+## Warnings
+(List anything the Developer must not break, backward-compatibility concerns,
+ or files that must NOT be touched. If none, write "None.")
+```
+
+- 調査で得た情報（ファイルパス・行番号・既存コードの内容）を必ず反映すること
+- 曖昧な指示は書かない。Developer が迷わず実装できる粒度で書く
+- 日本語は使わない。すべて英語で書く
 
 ## ツール
 

@@ -285,19 +285,19 @@ class StrandsAgent:
             result = None
 
         elif next_state == DevState.IMPLEMENTING:
-            # Prefer Planner output as the source of truth.
-            # Source is always Planner output (AWAITING_APPROVAL → IMPLEMENTING path).
-            # _last_planner_output should always be set here; message fallback is a safeguard.
-            source = self._last_planner_output if self._last_planner_output else message
-            # If already on a work branch (re-implementation case), instruct Developer not to create a new branch
+            # Ask Planner to generate a structured English instruction for Developer.
+            planner_prompt = "The plan has been approved. Now generate the Developer instruction document in English."
             if self.current_task_branch:
-                source = (
-                    f"{source}\n\n---\n"
-                    f"**Branch instruction**: You are already on the work branch "
-                    f"`{self.current_task_branch}`. Do NOT call create_branch. "
-                    f"Just implement the changes and commit."
+                planner_prompt += (
+                    f"\n\nNote: The work branch `{self.current_task_branch}` already exists. "
+                    f"Include in the Branch section: \"Use existing branch: {self.current_task_branch}. Do NOT call create_branch.\""
                 )
-            result = await nodes.invoke_developer(source)
+            planner_result = await nodes.invoke_planner(planner_prompt)
+            developer_instructions = str(planner_result)
+            # Update _last_planner_output with the structured instructions
+            self._last_planner_output = developer_instructions
+
+            result = await nodes.invoke_developer(developer_instructions)
             self._last_developer_output = str(result)
             self._last_planner_output = ""  # consumed
             # After IMPLEMENTING completes, capture the active branch name
