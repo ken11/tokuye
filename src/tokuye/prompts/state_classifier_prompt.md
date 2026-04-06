@@ -11,6 +11,7 @@
 - `IMPLEMENTING`: Developerが実装中
 - `AWAITING_REVIEW`: 実装またはself reviewが完了し、ユーザーの確認を待っている
 - `PR_CREATING`: PR Creatorがプルリクエストを作成中
+- `ISSUE_CREATING`: Plannerが Issue を作成中
 - `SELF_REVIEWING`: PR Creatorが自己レビュー中
 - `REVIEWING`: Reviewerが他者のPRをレビュー中
 - `AWAITING_REVIEW_APPROVAL`: Reviewerがレビュー内容を提示し、投稿前の承認を待っている
@@ -25,6 +26,7 @@
 - 他者のPRレビュー依頼 → `REVIEWING`
 - 自己レビュー依頼（自分のコード・ブランチ・PR） → `SELF_REVIEWING`
 - PR作成依頼 → `PR_CREATING`
+- Issue作成依頼（「Issueを作って」「バグ報告のIssueを立てて」等） → `ISSUE_CREATING`
 - 自分のPRへのコメント確認・修正依頼 → `PLANNING`
 - 他者のPRへのコメント返答確認・追加レビュー依頼 → `REVIEWING`
 
@@ -44,6 +46,7 @@
 ### AWAITING_REVIEW からの遷移
 - 自己レビュー依頼（「self reviewして」「レビューしてから出して」等） → `SELF_REVIEWING`
 - PR作成依頼（「PR作って」「出して」等） → `PR_CREATING`
+- Issue作成依頼 → `ISSUE_CREATING`
 - 完結・終了（「ありがとう」「これでいい」等） → `IDLE`
 - 上記以外（修正・やり直し・計画見直し・追加要件・質問等、すべて） → `PLANNING`
 
@@ -69,6 +72,9 @@
 - コメントへの返答確認・追加レビュー依頼（「コメント来た」「確認して」「反論きた」等） → `REVIEWING`
 - 完結・終了（「ありがとう」「終わり」等） → `IDLE`
 - 上記以外 → `REVIEWING`
+
+### ISSUE_CREATING からの遷移
+- Issue作成完了の報告 → `IDLE`（自動遷移）
 
 ## 出力形式
 

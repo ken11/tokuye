@@ -309,27 +309,36 @@ class StrandsAgent:
             sm.transition_after_node()
             self.add_system_message(f"[State: {sm.state.value}]")
 
-        elif next_state in (DevState.PR_CREATING, DevState.SELF_REVIEWING):
+        elif next_state == DevState.PR_CREATING:
             # PR Creator receives Developer output (structured by translation layer).
-            # For SELF_REVIEWING triggered directly by user, use user message.
             source = (
                 self._last_developer_output
-                if next_state == DevState.PR_CREATING and self._last_developer_output
+                if self._last_developer_output
                 else message
             )
             result = await nodes.invoke_pr_creator(
                 source,
-                issue_context=self._last_issue_context if next_state == DevState.PR_CREATING else "",
+                issue_context=self._last_issue_context,
             )
-            if next_state == DevState.PR_CREATING:
-                self._last_developer_output = ""  # consumed
-                self._last_issue_context = ""    # consumed
-                sm.transition_after_node()
-                self.add_system_message(f"[State: {sm.state.value}]")
-            elif next_state == DevState.SELF_REVIEWING:
-                # Auto-advance to AWAITING_REVIEW so user can decide next step
-                sm.transition_after_node()
-                self.add_system_message(f"[State: {sm.state.value}]")
+            self._last_developer_output = ""  # consumed
+            self._last_issue_context = ""    # consumed
+            sm.transition_after_node()
+            self.add_system_message(f"[State: {sm.state.value}]")
+
+        elif next_state == DevState.ISSUE_CREATING:
+            result = await nodes.invoke_planner(message)
+            sm.transition_after_node()  # ISSUE_CREATING → IDLE
+            self.add_system_message(f"[State: {sm.state.value}]")
+
+        elif next_state == DevState.SELF_REVIEWING:
+            # For SELF_REVIEWING triggered directly by user, use user message.
+            result = await nodes.invoke_pr_creator(
+                message,
+                issue_context="",
+            )
+            # Auto-advance to AWAITING_REVIEW so user can decide next step
+            sm.transition_after_node()
+            self.add_system_message(f"[State: {sm.state.value}]")
 
         elif next_state in (DevState.REVIEWING, DevState.AWAITING_REVIEW_APPROVAL):
             result = await nodes.invoke_reviewer(message)

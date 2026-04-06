@@ -11,6 +11,7 @@ You receive the current state and the user's message, and return the next state.
 - `IMPLEMENTING`: Developer is implementing.
 - `AWAITING_REVIEW`: Implementation or self-review is complete; waiting for user confirmation.
 - `PR_CREATING`: PR Creator is creating a pull request.
+- `ISSUE_CREATING`: Planner is creating a GitHub Issue
 - `SELF_REVIEWING`: PR Creator is performing a self-review.
 - `REVIEWING`: Reviewer is reviewing someone else's PR.
 - `AWAITING_REVIEW_APPROVAL`: Reviewer has presented review content and is waiting for approval before posting.
@@ -25,6 +26,7 @@ You receive the current state and the user's message, and return the next state.
 - Request to review someone else's PR → `REVIEWING`
 - Self-review request (own code / branch / PR) → `SELF_REVIEWING`
 - PR creation request → `PR_CREATING`
+- Request to create an Issue (e.g. "create an issue", "file a bug report issue") → `ISSUE_CREATING`
 - Comment check / fix request on your own PR → `PLANNING`
 - Response check / additional review request on someone else's PR → `REVIEWING`
 
@@ -44,6 +46,7 @@ You receive the current state and the user's message, and return the next state.
 ### From AWAITING_REVIEW
 - Self-review request ("do a self review", "review before submitting", etc.) → `SELF_REVIEWING`
 - PR creation request ("create a PR", "submit it", etc.) → `PR_CREATING`
+- Request to create an Issue → `ISSUE_CREATING`
 - Done / finished ("thanks", "this is fine", etc.) → `IDLE`
 - Anything else (fix requests, redo, plan revision, additional requirements, questions, etc.) → `PLANNING`
 
@@ -69,6 +72,9 @@ You receive the current state and the user's message, and return the next state.
 - Response to comment / additional review requested ("comment came in", "please check", "got a rebuttal", etc.) → `REVIEWING`
 - Completion / closure ("thanks", "done", etc.) → `IDLE`
 - Anything else → `REVIEWING`
+
+### Transitions from ISSUE_CREATING
+- Issue creation completion reported → `IDLE` (automatic transition)
 
 ## Output format
 
