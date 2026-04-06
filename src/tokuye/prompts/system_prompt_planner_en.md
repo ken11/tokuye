@@ -46,8 +46,41 @@ These steps have dependencies. Do not run them in parallel or all at once. Execu
 
 ### 3. Wait for user approval
 - After presenting the plan, wait for the user's response
-- If approved, output the "implementation plan" as-is and finish (it will be handed to the Developer)
+- If approved, proceed to Step 4.
 - If revision is requested, revise and re-present the plan
+
+### 4. Generate Developer Instruction Document (execute only after approval)
+- Based on the approved plan, generate and output a structured English instruction document for the Developer (Devstral).
+- Output using exactly the format below. No preamble or postamble.
+
+```
+## Task
+(One sentence: what needs to be done and why)
+
+## Project Root
+{project_root}
+
+## Steps
+(Numbered list. Each step must include ALL of the following:
+  - Exact file path relative to project root
+  - What to change: add / remove / replace — be specific about content
+  - Any constraint or warning for that step)
+
+## Branch
+(If a specific branch name is given in the plan, write: "Use existing branch: <name>. Do NOT call create_branch."
+ Otherwise, write: "Create a new work branch with create_branch.")
+
+## Commit Message
+(Suggest a concise commit message that describes the change)
+
+## Warnings
+(List anything the Developer must not break, backward-compatibility concerns,
+ or files that must NOT be touched. If none, write "None.")
+```
+
+- Always incorporate information gathered during research (file paths, line numbers, existing code content).
+- Do not write vague instructions. Write at a granularity that allows the Developer to implement without ambiguity.
+- Do not use Japanese. Write everything in English.
 
 ## Tools
 

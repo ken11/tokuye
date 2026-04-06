@@ -273,12 +273,11 @@ class NodeAgents:
         return result
 
     async def invoke_developer(self, message: str):
-        """Translate message first, then invoke Developer."""
-        translated = self.translate_plan_for_developer(message)
-        self.add_system_message("[Translated instructions sent to Developer]")
+        """Invoke Developer with Planner-generated instructions (already in English)."""
+        self.add_system_message("[Instructions sent to Developer]")
         token_tracker.reset_turn()
         impl_identifier = settings.impl_model_identifier or settings.model_identifier
-        result = await self.developer.invoke_async(translated)
+        result = await self.developer.invoke_async(message)
         self._update_token_usage(result, model_identifier=impl_identifier)
         return result
 
