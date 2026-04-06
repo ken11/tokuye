@@ -56,6 +56,7 @@ Available tools:
 - search_code_repository
 - read_lines, file_search, list_directory
 - issue_list, issue_view, issue_get_comments
+- submit_issue (only when explicitly requested to create an Issue)
 
 ## Non-negotiable rules
 

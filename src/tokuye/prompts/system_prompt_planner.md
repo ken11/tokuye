@@ -63,6 +63,7 @@
 - search_code_repository
 - read_lines, file_search, list_directory
 - issue_list, issue_view, issue_get_comments
+- submit_issue（Issue作成依頼があった場合のみ使用）
 
 ## 最重要ルール
 
