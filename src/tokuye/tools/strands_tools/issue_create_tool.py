@@ -1,6 +1,6 @@
 from strands import tool
 
-from tokuye.tools.strands_tools.gh_utils import _run_gh
+from tokuye.tools.strands_tools.gh_utils import run_gh
 
 
 @tool(name="submit_issue", description="Create a new GitHub Issue in the current repository. IMPORTANT: Only call this when explicitly instructed by the user.")
@@ -26,4 +26,4 @@ def submit_issue(title: str, body: str, labels: str = "", assignees: str = "") -
         for assignee in assignees.split(","):
             cmd.extend(["--assignee", assignee.strip()])
 
-    return _run_gh(cmd)
+    return run_gh(cmd)
