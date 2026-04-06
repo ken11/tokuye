@@ -32,8 +32,10 @@ You receive the current state and the user's message, and return the next state.
 
 ### From PLANNING
 - Investigation / question is resolved ("thanks", "got it", etc.) → `IDLE`
+- After presenting an implementation / revision plan, user approves ("ok", "yes", "go ahead", "approved", "please proceed", etc.) → `AWAITING_APPROVAL`
+- After presenting an implementation / revision plan, user requests changes or revision → `PLANNING`
 - Other (follow-up questions, additional investigation, clarification, etc.) → `PLANNING`
-- Note: transition to `AWAITING_APPROVAL` after plan presentation is handled automatically by the system
+- Note: transition to `AWAITING_APPROVAL` is determined here based on the user's approval message (no automatic system transition)
 
 ### From AWAITING_APPROVAL
 - Approval / agreement ("ok", "yes", "go ahead", "approved", "please proceed", etc.) → `IMPLEMENTING`
