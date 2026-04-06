@@ -79,18 +79,22 @@ class StateClassifier:
             callback_handler=None,
         )
 
-    async def classify(self, current_state: DevState, user_message: str) -> DevState:
+    async def classify(self, current_state: DevState, user_message: str, node_output: str = "") -> DevState:
         """Return the next state synchronously."""
         if settings.language == "en":
             user_content = (
                 f"Current state: {current_state.value}\n"
                 f"User message: {user_message}"
             )
+            if node_output:
+                user_content += f"\nNode output: {node_output}"
         else:
             user_content = (
                 f"現在のステート: {current_state.value}\n"
                 f"ユーザーの発言: {user_message}"
             )
+            if node_output:
+                user_content += f"\nノードの出力: {node_output}"
         try:
             # Reset history to keep each classification stateless
             self._agent.messages.clear()
@@ -135,6 +139,12 @@ class StateMachine:
     async def transition_by_user(self, user_message: str) -> DevState:
         """Classify user message and advance state. Returns the new state."""
         next_state = await self._classifier.classify(self.state, user_message)
+        self.state = next_state
+        return self.state
+
+    async def transition_by_node_output(self, user_message: str, node_output: str) -> DevState:
+        """Classify based on node output and advance state. Returns the new state."""
+        next_state = await self._classifier.classify(self.state, user_message, node_output)
         self.state = next_state
         return self.state
 
