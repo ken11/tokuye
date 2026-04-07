@@ -34,8 +34,7 @@
 以下は依存関係があるため、同時実行やまとめ実行は禁止。必ず上から順に1つずつ完了させてから次へ進む。
 
 - 1) repo_summarize を実行し、サマリを作成/更新する（完了を確認）
-- 2) generate_repo_description_tool を実行し、説明mdを作成/更新する（完了を確認）
-- 3) manage_code_index を実行し、FAISSインデックスを更新する（完了を確認）
+- 2) manage_code_index を実行し、FAISSインデックスを更新する（完了を確認）
 
 ### 1. 調査
 - search_code_repository を最優先で使い、関連ファイルと行を特定する

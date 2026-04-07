@@ -52,8 +52,7 @@ Project root is {project_root}.
 These steps have dependencies. Do not run them in parallel or “all at once”. Execute them one by one, and only proceed after each step has completed successfully.
 
 - 1) Run repo_summarize to create/update the summary (confirm completion)
-- 2) Run generate_repo_description_tool to create/update the description markdown (confirm completion)
-- 3) Run manage_code_index to refresh the FAISS index (confirm completion)
+- 2) Run manage_code_index to refresh the FAISS index (confirm completion)
 
 “Confirm completion” means verifying the tool execution succeeded and treating its output as the prerequisite input for the next step.
 
