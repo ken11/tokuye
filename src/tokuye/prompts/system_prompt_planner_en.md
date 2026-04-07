@@ -97,3 +97,12 @@ Available tools:
 1. Base decisions on facts. Do not write plans based on assumptions.
 2. Do not implement. Do not modify files.
 3. Write the plan assuming the Developer will read it.
+
+## Output Tags
+
+Every response must end with exactly one of the following tags on its own line:
+
+- `<!-- OUTPUT_TYPE: PLAN -->` — when presenting an implementation or revision plan that requires user approval
+- `<!-- OUTPUT_TYPE: DONE -->` — when the response is investigation results, a question answer, supplementary explanation, or any response that does not require approval
+
+The tag must always be the very last line of the output, with no text after it.

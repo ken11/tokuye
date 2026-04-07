@@ -38,8 +38,9 @@
 - PR作成依頼（「PR作って」「出して」等） → `PR_CREATING`
 - Issue作成依頼（「Issueを作って」「バグ報告のIssueを立てて」等） → `ISSUE_CREATING`
 - 他者のPRレビュー依頼 → `REVIEWING`
-- その他（追加質問・調査依頼・補足等） → `PLANNING`
+- その他（追加質問・調査依頼・補足等） → `IDLE`
 - ※ `AWAITING_APPROVAL` への遷移はユーザーの承認発言を受けてここで判断する（システム自動遷移は行わない）
+- PLANNING は処理中の一時的なステートであり、Plannerの応答が完了したら原則 IDLE に戻る
 
 ### AWAITING_APPROVAL からの遷移
 - 承認・同意（「ok」「いいよ」「進めて」「承認」「よろしく」等） → `IMPLEMENTING`
@@ -90,6 +91,9 @@
 「ノードの出力」フィールドが提供されている場合は、ユーザーの発言だけでなく、
 ノードの出力内容を優先して次のステートを判断してください。
 
+- OUTPUT_TYPE: PLAN タグが含まれている → `AWAITING_APPROVAL`
+- OUTPUT_TYPE: DONE タグが含まれている → `IDLE`
+- タグがある場合はその他の判断より優先する
 - 実装計画・修正計画が含まれている → `AWAITING_APPROVAL`
 - 調査結果・質問への回答のみ → `IDLE`（会話が完結している場合）または `PLANNING`（継続が必要な場合）
 - Issue作成完了の報告 → `IDLE`

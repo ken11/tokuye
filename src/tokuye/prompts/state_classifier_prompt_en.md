@@ -38,8 +38,9 @@ You receive the current state and the user's message, and return the next state.
 - PR creation request ("create a PR", "submit it", etc.) → `PR_CREATING`
 - Request to create an Issue ("create an issue", "file a bug report issue", etc.) → `ISSUE_CREATING`
 - Request to review someone else's PR → `REVIEWING`
-- Other (follow-up questions, additional investigation, clarification, etc.) → `PLANNING`
+- Other (follow-up questions, additional investigation, clarification, etc.) → `IDLE`
 - Note: transition to `AWAITING_APPROVAL` is determined here based on the user's approval message (no automatic system transition)
+- PLANNING is a transient state while the Planner is running; once the Planner responds, the state returns to IDLE by default
 
 ### From AWAITING_APPROVAL
 - Approval / agreement ("ok", "yes", "go ahead", "approved", "please proceed", etc.) → `IMPLEMENTING`
@@ -90,6 +91,9 @@ You receive the current state and the user's message, and return the next state.
 When a "Node output" field is provided, prioritize the node output content
 (not just the user message) to determine the next state.
 
+- Contains OUTPUT_TYPE: PLAN tag → `AWAITING_APPROVAL`
+- Contains OUTPUT_TYPE: DONE tag → `IDLE`
+- When a tag is present, it takes priority over all other rules
 - Contains an implementation plan or revision plan → `AWAITING_APPROVAL`
 - Contains only investigation results or answers to questions → `IDLE` (if conversation is complete) or `PLANNING` (if continuation is needed)
 - Reports Issue creation complete → `IDLE`

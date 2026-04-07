@@ -81,6 +81,25 @@ class StateClassifier:
 
     async def classify(self, current_state: DevState, user_message: str, node_output: str = "") -> DevState:
         """Return the next state synchronously."""
+        # Tag-based bypass: skip LLM call if output contains a tag
+        if node_output:
+            if "<!-- OUTPUT_TYPE: PLAN -->" in node_output:
+                logger.info(
+                    "StateClassifier: %s + %r → %s (bypassed via PLAN tag)",
+                    current_state.value,
+                    user_message[:80],
+                    DevState.AWAITING_APPROVAL.value,
+                )
+                return DevState.AWAITING_APPROVAL
+            if "<!-- OUTPUT_TYPE: DONE -->" in node_output:
+                logger.info(
+                    "StateClassifier: %s + %r → %s (bypassed via DONE tag)",
+                    current_state.value,
+                    user_message[:80],
+                    DevState.IDLE.value,
+                )
+                return DevState.IDLE
+
         if settings.language == "en":
             user_content = (
                 f"Current state: {current_state.value}\n"
