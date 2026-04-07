@@ -284,8 +284,10 @@ class StrandsAgent:
             result = None
 
         elif next_state == DevState.IMPLEMENTING:
-            # Ask Planner to generate a structured English instruction for Developer.
-            planner_prompt = "The plan has been approved. Now generate the Developer instruction document in English."
+            # Pass the user's approval message directly to Planner so it receives
+            # the same input it expects after step 3 (awaiting approval) and
+            # naturally proceeds to step 4 (generate English instructions for Developer).
+            planner_prompt = message or "ok"
             if self.current_task_branch:
                 planner_prompt += (
                     f"\n\nNote: The work branch `{self.current_task_branch}` already exists. "
