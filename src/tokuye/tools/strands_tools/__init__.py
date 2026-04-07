@@ -16,6 +16,7 @@ from tokuye.tools.strands_tools.issue_tools import (issue_list,
                                                     issue_view,
                                                     issue_get_comments)
 from tokuye.tools.strands_tools.issue_create_tool import submit_issue
+from tokuye.tools.strands_tools.issue_comment_tool import issue_add_comment
 from tokuye.tools.strands_tools.repo_description import \
     generate_repo_description_tool
 from tokuye.tools.strands_tools.repo_summary import repo_summarize
@@ -61,6 +62,7 @@ all_tools = [
     issue_view,
     issue_get_comments,
     submit_issue,
+    issue_add_comment,
     report_phase,
 ]
 
@@ -82,6 +84,7 @@ planner_tools = [
     issue_view,
     issue_get_comments,
     submit_issue,
+    issue_add_comment,
 ]
 
 developer_tools = [
