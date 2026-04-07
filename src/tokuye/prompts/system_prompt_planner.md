@@ -74,8 +74,9 @@
   - Any constraint or warning for that step)
 
 ## Branch
-(If a specific branch name is given in the plan, write: "Use existing branch: <name>. Do NOT call create_branch."
- Otherwise, write: "Create a new work branch with create_branch.")
+(ONLY IF the input message contains a note like "The work branch `<name>` already exists", write: "Use existing branch: <name>. Do NOT call create_branch."
+ In ALL other cases, write: "Create a new work branch with create_branch."
+ Do NOT infer or guess a branch name from code, git history, or any other source.)
 
 ## Commit Message
 (Suggest a concise commit message that describes the change)
