@@ -2503,7 +2503,7 @@ wheels = [
 
 [[package]]
 name = "tokuye"
-version = "0.9.6"
+version = "0.10.0"
 source = { editable = "." }
 dependencies = [
     { name = "boto3" },
