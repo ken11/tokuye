@@ -46,7 +46,7 @@ class TokenUsageTracker:
     EMBEDDING_TOKEN_PRICE = 0.000029  # USD per 1000 tokens (for Titan Embeddings)
 
     # Exchange rate (JPY per USD)
-    EXCHANGE_RATE = 155
+    EXCHANGE_RATE = 160
 
     def __init__(self):
         self._lock = threading.Lock()
