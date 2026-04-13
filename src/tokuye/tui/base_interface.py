@@ -330,13 +330,16 @@ class ChatInterface(App):
 
     def action_toggle_continuation(self) -> None:
         switch = self.query_one("#continuation-switch", Switch)
-        switch.value = not switch.value    @on(Switch.Changed, "#continuation-switch")
+        switch.value = not switch.value
+
+    @on(Switch.Changed, "#continuation-switch")
     def handle_continuation_switch_changed(self, event: Switch.Changed) -> None:
         if event.value:
             try:
                 from git import Repo
                 branch = Repo(self.project_root).active_branch.name
                 self.continuous_task_branch = branch
+                self.agent.current_task_branch = branch
                 settings.continuation_mode = True
             except Exception:
                 self.continuous_task_branch = ""
@@ -347,6 +350,7 @@ class ChatInterface(App):
                 )
         else:
             self.continuous_task_branch = ""
+            self.agent.current_task_branch = ""
             settings.continuation_mode = False
 
     def add_user_message(self, content: str) -> None:
