@@ -38,25 +38,25 @@ Header {
 
 #message-input {
     width: 1fr;
-    height: 12;
+    height: 15;
     margin-right: 1;
 }
 
 #button-container {
-    width: 16;
+    width: 24;
     height: auto;
     display: block;
 }
 
 #send-button {
-    width: 16;
+    width: 24;
     height: 3;
     border: none;
     margin-bottom: 1;
 }
 
 #reset-button {
-    width: 16;
+    width: 24;
     height: 3;
     border: none;
     margin-bottom: 1;
@@ -64,7 +64,7 @@ Header {
 }
 
 #recall-issue-button {
-    width: 16;
+    width: 24;
     height: 3;
     border: none;
     margin-bottom: 1;
@@ -98,21 +98,33 @@ Header {
     height: 10;
     padding: 1;
     border-top: solid $primary;
-}#continuation-container {
-    width: 16;
-    height: auto;
+}
+
+#continuation-container {
+    width: 24;
+    height: 3;
     margin-top: 1;
+
+    padding: 0 1;
     align: center middle;
+    content-align: center middle;
+
+    background: $surface;
+    border: round $panel;
 }
 
 #continuation-label {
-    width: auto;
-    margin-right: 1;
+    width: 1fr;
+    content-align: left middle;
+    color: $text-muted;
+    text-style: bold;
 }
 
 #continuation-switch {
-    width: 5;
-    height: 1;
+    width: auto;
+    height: auto;
+    border: none;
+    padding: 0;
 }
 
 ChatMessageWidget {
