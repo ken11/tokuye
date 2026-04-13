@@ -54,6 +54,7 @@ class Settings(BaseSettings):
     model_temperature: float = 0.2
     pr_branch_prefix: str = "tokuye/"
     max_steps: int = 100
+    continuation_mode: bool = False
 
     system_prompt_markdown_path: Optional[str] = ""
 

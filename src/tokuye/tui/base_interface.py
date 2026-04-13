@@ -22,7 +22,7 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Horizontal, Vertical, VerticalScroll
 from textual.css.query import NoMatches
-from textual.widgets import Button, Footer, Header, Label, TextArea
+from textual.widgets import Button, Footer, Header, Label, Switch, TextArea
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +74,7 @@ class ChatInterface(App):
 
         self.waiting_for_resume: bool = False
         self.waiting_for_recursion: bool = False
+        self.continuous_task_branch: str = ""
 
     def compose(self) -> ComposeResult:
         yield Header(name=self.title, show_clock=True)
@@ -94,6 +95,9 @@ class ChatInterface(App):
                                 id="recall-issue-button",
                                 variant="success",
                             )
+                            with Horizontal(id="continuation-container"):
+                                yield Label("Continuation", id="continuation-label")
+                                yield Switch(False, id="continuation-switch")
 
             with Container(id="side-panel"):
                 yield UnifiedSidePanelDisplay(id="unified-panel")
@@ -253,6 +257,14 @@ class ChatInterface(App):
                 f.write(message)
             self.add_system_message(f"Issue saved: {issue_file_path}")
 
+        if settings.continuation_mode and self.continuous_task_branch:
+            message = (
+                message or ""
+            ) + (
+                f"\n\n[Continuation mode] Do NOT create a new branch. "
+                f"Commit directly to the current branch '{self.continuous_task_branch}'."
+            )
+
         try:
             _ = await self.agent(message)
         except ContextWindowOverflowException as e:
@@ -313,7 +325,24 @@ class ChatInterface(App):
         with open(issue_file_path, "r", encoding="utf-8") as f:
             issue_content = f.read()
 
-        input_widget.load_text(issue_content)
+        input_widget.load_text(issue_content)    @on(Switch.Changed, "#continuation-switch")
+    def handle_continuation_switch_changed(self, event: Switch.Changed) -> None:
+        if event.value:
+            try:
+                from git import Repo
+                branch = Repo(self.project_root).active_branch.name
+                self.continuous_task_branch = branch
+                settings.continuation_mode = True
+            except Exception:
+                self.continuous_task_branch = ""
+                settings.continuation_mode = False
+                self.query_one("#continuation-switch", Switch).value = False
+                self.add_system_message(
+                    "Continuation mode: could not detect current branch (detached HEAD?). Mode disabled."
+                )
+        else:
+            self.continuous_task_branch = ""
+            settings.continuation_mode = False
 
     def add_user_message(self, content: str) -> None:
         message = ChatMessage(content, is_user=True)

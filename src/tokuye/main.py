@@ -3,6 +3,7 @@ import os
 import signal
 import sys
 from pathlib import Path
+from typing import Optional
 
 import typer
 
@@ -20,8 +21,8 @@ def signal_handler(sig, frame):
 
 
 def main(
-    project_root: Path = typer.Option(
-        ..., "--project-root", "-p", help="Root directory of the project"
+    project_root: Optional[Path] = typer.Option(
+        None, "--project-root", "-p", help="Root directory of the project"
     ),
     log_level: str = typer.Option(
         "info", "--log-level", "-l", help="Log level (debug, info, warning, error)"
@@ -35,6 +36,8 @@ def main(
         project_root: Root directory of the project
         log_level: Log level (debug, info, warning, error)
     """
+    if project_root is None:
+        project_root = Path.cwd()
     project_root = project_root.absolute()
 
     if not project_root.exists() or not project_root.is_dir():
