@@ -82,9 +82,31 @@ Shows per-turn token usage breakdown:
 |-----|--------|
 | `Ctrl+D` | Send message |
 | `Enter` | New line in input |
+| `Ctrl+A` | Toggle Continuation Mode |
 | `Ctrl+Q` | Quit |
 
 ## Theme Customization
+## Continuation Mode
+
+Continuation Mode allows you to continue working on an existing branch without creating a new one.
+
+When enabled, every message you send is automatically appended with an instruction telling the agent to commit directly to the current branch instead of creating a new branch.
+
+### How to use
+
+1. Check out the branch you want to continue working on
+2. Toggle Continuation Mode on with `Ctrl+A` (or click the **Continuation** switch in the input area)
+3. Send your message as usual — the agent will commit to the current branch
+
+### Behavior
+
+- **ON**: Tokuye detects the current Git branch and appends the following note to every message:
+  ```
+  [Continuation mode] Do NOT create a new branch. Commit directly to the current branch '<branch-name>'.
+  ```
+- **OFF**: Normal behavior — the agent creates a new branch as needed
+
+> **Note**: If the repository is in a detached HEAD state, Continuation Mode cannot be enabled and will be automatically disabled with an error message.
 
 The TUI theme is controlled by the `theme` setting in your config:
 
