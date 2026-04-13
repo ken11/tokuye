@@ -325,7 +325,9 @@ class ChatInterface(App):
         with open(issue_file_path, "r", encoding="utf-8") as f:
             issue_content = f.read()
 
-        input_widget.load_text(issue_content)    @on(Switch.Changed, "#continuation-switch")
+        input_widget.load_text(issue_content)
+
+    @on(Switch.Changed, "#continuation-switch")
     def handle_continuation_switch_changed(self, event: Switch.Changed) -> None:
         if event.value:
             try:

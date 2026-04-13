@@ -44,7 +44,7 @@ Header {
 
 #button-container {
     width: 16;
-    height: 12;
+    height: auto;
     display: block;
 }
 
@@ -67,6 +67,7 @@ Header {
     width: 16;
     height: 3;
     border: none;
+    margin-bottom: 1;
 }
 
 #side-panel {
@@ -97,6 +98,21 @@ Header {
     height: 10;
     padding: 1;
     border-top: solid $primary;
+}#continuation-container {
+    width: 16;
+    height: auto;
+    margin-top: 1;
+    align: center middle;
+}
+
+#continuation-label {
+    width: auto;
+    margin-right: 1;
+}
+
+#continuation-switch {
+    width: 5;
+    height: 1;
 }
 
 ChatMessageWidget {
