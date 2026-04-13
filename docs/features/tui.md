@@ -85,7 +85,6 @@ Shows per-turn token usage breakdown:
 | `Ctrl+A` | Toggle Continuation Mode |
 | `Ctrl+Q` | Quit |
 
-## Theme Customization
 ## Continuation Mode
 
 Continuation Mode allows you to continue working on an existing branch without creating a new one.
@@ -107,6 +106,8 @@ When enabled, every message you send is automatically appended with an instructi
 - **OFF**: Normal behavior — the agent creates a new branch as needed
 
 > **Note**: If the repository is in a detached HEAD state, Continuation Mode cannot be enabled and will be automatically disabled with an error message.
+
+## Theme Customization
 
 The TUI theme is controlled by the `theme` setting in your config:
 
