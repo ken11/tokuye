@@ -35,6 +35,7 @@ class ChatInterface(App):
         Binding("ctrl+q", "quit", "Quit"),
         Binding("enter", "noop", "New line", show=True, id="newline"),
         Binding("ctrl+d", "no", "Send", show=True, priority=True, id="send"),
+        Binding("ctrl+a", "toggle_continuation", "Continuation", show=True),
     ]
 
     def __init__(
@@ -327,7 +328,9 @@ class ChatInterface(App):
 
         input_widget.load_text(issue_content)
 
-    @on(Switch.Changed, "#continuation-switch")
+    def action_toggle_continuation(self) -> None:
+        switch = self.query_one("#continuation-switch", Switch)
+        switch.value = not switch.value    @on(Switch.Changed, "#continuation-switch")
     def handle_continuation_switch_changed(self, event: Switch.Changed) -> None:
         if event.value:
             try:

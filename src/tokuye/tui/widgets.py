@@ -20,6 +20,10 @@ class MessageInput(TextArea):
                 self.app.action_send_message()
             elif event.key == "enter":
                 event.prevent_default()
+            elif event.key == "ctrl+a":
+                event.prevent_default()
+                event.stop()
+                self.app.action_toggle_continuation()
                 event.stop()
                 self.insert(self.document.newline, self.cursor_location)
 
