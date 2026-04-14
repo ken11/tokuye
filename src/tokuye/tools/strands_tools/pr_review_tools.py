@@ -175,12 +175,17 @@ def pr_view(pr_number: int) -> str:
     description=(
         "Get the full diff of a pull request. "
         "Returns the unified diff output showing all code changes. "
+        "Always fetches the latest diff from the GitHub API, "
+        "independent of local git state. "
         "Use this to review the actual code changes in a PR."
     ),
 )
 def pr_diff(pr_number: int) -> str:
     """
-    Get the diff of a pull request.
+    Get the diff of a pull request via the GitHub REST API.
+
+    Uses the GitHub API with the ``application/vnd.github.v3.diff`` media type
+    to always return the latest remote diff, regardless of local git state.
 
     Args:
         pr_number: The pull request number.
@@ -189,7 +194,11 @@ def pr_diff(pr_number: int) -> str:
         Unified diff string of the PR.
     """
     try:
-        diff_output = _run_gh(["pr", "diff", str(pr_number)])
+        diff_output = _run_gh([
+            "api",
+            f"repos/{{owner}}/{{repo}}/pulls/{pr_number}",
+            "--header", "Accept: application/vnd.github.v3.diff",
+        ])
 
         if not diff_output.strip():
             return (
