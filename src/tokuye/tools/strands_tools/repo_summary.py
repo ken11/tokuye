@@ -85,6 +85,8 @@ def _get_global_summary_ignore_path() -> Path:
     xdg = os.environ.get("XDG_CONFIG_HOME")
     base = Path(xdg) if xdg else Path.home() / ".config"
     return base / "tokuye" / "summary.ignore"
+
+
 def load_summary_ignore(repo_root: Path) -> List[str]:
     patterns: List[str] = []
 
