@@ -134,6 +134,7 @@ def _apply_yaml_to_settings(
     keeping the rest.
     """
     simple_keys = [
+        "language",
         "bedrock_model_id",
         "bedrock_embedding_model_id",
         "bedrock_plan_model_id",
