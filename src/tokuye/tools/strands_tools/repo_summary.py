@@ -7,6 +7,7 @@ https://github.com/yamadashy/repomix (MIT License)
 
 import datetime
 import logging
+import os
 import re
 import textwrap
 import xml.etree.ElementTree as ET
@@ -80,11 +81,24 @@ def is_binary(path: Path, sample_size: int = 2048) -> bool:
     return result is None
 
 
+def _get_global_summary_ignore_path() -> Path:
+    xdg = os.environ.get("XDG_CONFIG_HOME")
+    base = Path(xdg) if xdg else Path.home() / ".config"
+    return base / "tokuye" / "summary.ignore"
 def load_summary_ignore(repo_root: Path) -> List[str]:
-    summary_ignore_path = repo_root / ".tokuye" / "summary.ignore"
-    if summary_ignore_path.exists():
-        return summary_ignore_path.read_text().splitlines()
-    return []
+    patterns: List[str] = []
+
+    # Load global summary.ignore
+    global_path = _get_global_summary_ignore_path()
+    if global_path.exists():
+        patterns += global_path.read_text().splitlines()
+
+    # Load project-level summary.ignore
+    project_path = repo_root / ".tokuye" / "summary.ignore"
+    if project_path.exists():
+        patterns += project_path.read_text().splitlines()
+
+    return patterns
 
 
 def is_likely_seed_data(path: Path, content: str) -> bool:
