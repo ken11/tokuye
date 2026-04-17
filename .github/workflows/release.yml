@@ -63,10 +63,12 @@ jobs:
       - name: Build binary with Nuitka
         shell: bash
         run: |
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION#v}"
           uv run python -m nuitka \
             --mode=onefile \
             --onefile-tempdir-spec="{CACHE_DIR}/tokuye/{VERSION}" \
-            --product-version="${{ github.ref_name }}" \
+            --product-version="$VERSION" \
             --include-package=tokuye \
             --include-package-data=tokuye \
             --include-package-data=botocore \
