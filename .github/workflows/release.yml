@@ -66,6 +66,7 @@ jobs:
           uv run python -m nuitka \
             --mode=onefile \
             --onefile-tempdir-spec="{CACHE_DIR}/tokuye/{VERSION}" \
+            --product-version="${{ github.ref_name }}" \
             --include-package=tokuye \
             --include-package-data=tokuye \
             --include-package-data=botocore \
