@@ -3,7 +3,8 @@ EpicWorkerAgent for v3 Epic Mode.
 
 Handles one task at a time.  Each task gets its own session (FileSessionManager
 with a task-scoped session_id).  The agent does NOT interact with the user
-directly; it returns structured YAML results to EpicManagerAgent.
+directly; it is invoked as a Strands tool (run_epic_worker) and returns a
+structured YAML string to EpicManagerAgent.
 
 Usage
 -----
@@ -18,7 +19,6 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Callable, Optional
 
 from strands import Agent
 from strands.agent.conversation_manager import SummarizingConversationManager
@@ -47,25 +47,17 @@ class EpicWorkerAgent:
     Create a new instance for each task (or reuse for the same task to continue
     the session).
 
-    Callbacks are optional; when omitted the worker runs silently and returns
-    the result string directly.
+    Invoked as a Strands tool (run_epic_worker); no TUI callbacks needed.
+    Returns a YAML string as the task result.
     """
 
     def __init__(
         self,
         epic_id: str,
         task_id: str,
-        add_ai_message: Optional[Callable] = None,
-        add_system_message: Optional[Callable] = None,
-        set_thinking: Optional[Callable] = None,
-        update_token_usage: Optional[Callable] = None,
     ) -> None:
         self.epic_id = epic_id
         self.task_id = task_id
-        self.add_ai_message = add_ai_message
-        self.add_system_message = add_system_message
-        self.set_thinking = set_thinking
-        self.update_token_usage = update_token_usage
 
         # System prompt (language-aware)
         if settings.language == "ja":
@@ -101,7 +93,7 @@ class EpicWorkerAgent:
             session_id=session_id, storage_dir=session_dir
         )
 
-        # Build agent immediately (no MCP for worker — keeps it lightweight)
+        # Build agent (no MCP for worker — keeps it lightweight)
         self.agent = Agent(
             model=self.model,
             tools=developer_tools,
@@ -110,28 +102,7 @@ class EpicWorkerAgent:
             conversation_manager=SummarizingConversationManager(
                 summarization_system_prompt=self.summary_prompt
             ),
-            callback_handler=self._callback_handler,
         )
-
-    def _callback_handler(self, **kwargs) -> None:
-        """Forward streaming events to TUI callbacks (no-op when callbacks are None)."""
-        event = kwargs.get("event")
-        if event == "message":
-            data = kwargs.get("data", {})
-            content = data.get("content", "")
-            if content and self.add_ai_message:
-                self.add_ai_message(content)
-        elif event == "thinking":
-            if self.set_thinking:
-                self.set_thinking(kwargs.get("data", False))
-        elif event == "usage":
-            data = kwargs.get("data", {})
-            input_tokens = data.get("input_tokens", 0)
-            output_tokens = data.get("output_tokens", 0)
-            if self.update_token_usage:
-                self.update_token_usage(
-                    f"Worker [{self.task_id}] — in: {input_tokens}, out: {output_tokens}"
-                )
 
     def __call__(self, instruction: str) -> str:
         """Run the worker with *instruction* and return the raw response text.
@@ -142,21 +113,15 @@ class EpicWorkerAgent:
         Returns:
             Raw response string (expected to be YAML by the system prompt).
         """
-        if self.set_thinking:
-            self.set_thinking(True)
-        try:
-            result = self.agent(instruction)
-            # Extract text content from AgentResult
-            if hasattr(result, "message") and result.message:
-                content = result.message.get("content", [])
-                if isinstance(content, list):
-                    texts = [
-                        c.get("text", "") for c in content if isinstance(c, dict)
-                    ]
-                    return "\n".join(t for t in texts if t)
-                if isinstance(content, str):
-                    return content
-            return str(result)
-        finally:
-            if self.set_thinking:
-                self.set_thinking(False)
+        result = self.agent(instruction)
+        # Extract text content from AgentResult
+        if hasattr(result, "message") and result.message:
+            content = result.message.get("content", [])
+            if isinstance(content, list):
+                texts = [
+                    c.get("text", "") for c in content if isinstance(c, dict)
+                ]
+                return "\n".join(t for t in texts if t)
+            if isinstance(content, str):
+                return content
+        return str(result)

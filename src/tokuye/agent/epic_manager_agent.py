@@ -28,6 +28,7 @@ from strands.agent.conversation_manager import SummarizingConversationManager
 from strands.models import BedrockModel
 from strands.session.file_session_manager import FileSessionManager
 
+from tokuye.mcp_manager import MCPClientManager
 from tokuye.prompts.prompt_loader import load_prompt, load_prompt_if_exists
 from tokuye.tools.strands_tools.epic_tools import epic_manager_tools
 from tokuye.utils.config import settings
@@ -102,11 +103,40 @@ class EpicManagerAgent:
             session_id=thread_id, storage_dir=session_dir
         )
 
-        # Build the Strands Agent with epic_manager_tools
-        # EpicWorkerAgent is invoked via the run_epic_worker tool.
+        # MCP manager — actual start/get_tools is deferred to _init_mcp_and_build_agent()
+        self.mcp_manager = MCPClientManager(settings.mcp_servers)
+
+        # Agent is built lazily on first __call__
+        self.agent = None
+        self.step_count = 0
+        self._mcp_initialized = False
+
+        # current_task_branch kept for interface compatibility with ChatInterface
+        self.current_task_branch: str = ""
+
+    # ------------------------------------------------------------------
+    # Lazy initialisation (MCP + Agent)
+    # ------------------------------------------------------------------
+
+    async def _init_mcp_and_build_agent(self) -> None:
+        """Start MCP clients, fetch tools, and build the Strands Agent.
+
+        Called once on the first __call__ invocation so that MCP I/O runs
+        inside the event loop instead of blocking __init__.
+        """
+        if self._mcp_initialized:
+            return
+
+        await self.mcp_manager.start_async()
+        mcp_tools = await self.mcp_manager.get_tools_async()
+        if mcp_tools:
+            logger.info("EpicManagerAgent: loaded %d MCP tools", len(mcp_tools))
+
+        combined_tools = list(epic_manager_tools) + mcp_tools
+
         self.agent = Agent(
             model=self.model,
-            tools=epic_manager_tools,
+            tools=combined_tools,
             system_prompt=self.system_prompt,
             session_manager=self.session_manager,
             conversation_manager=SummarizingConversationManager(
@@ -115,9 +145,7 @@ class EpicManagerAgent:
             callback_handler=self._callback_handler,
         )
 
-        self.step_count = 0
-        # current_task_branch kept for interface compatibility with ChatInterface
-        self.current_task_branch: str = ""
+        self._mcp_initialized = True
 
     # ------------------------------------------------------------------
     # Public interface (same as StrandsAgent)
@@ -125,6 +153,8 @@ class EpicManagerAgent:
 
     async def __call__(self, message: str | None = None, **kwargs):
         """Process a user message."""
+        if not self._mcp_initialized:
+            await self._init_mcp_and_build_agent()
         self.set_thinking(True)
         try:
             token_tracker.reset_turn()
@@ -135,8 +165,8 @@ class EpicManagerAgent:
             self.set_thinking(False)
 
     async def cleanup(self) -> None:
-        """No MCP connections to clean up for EpicManagerAgent."""
-        pass
+        """Stop MCP connections."""
+        await self.mcp_manager.stop_async()
 
     # ------------------------------------------------------------------
     # Internal
