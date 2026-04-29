@@ -43,14 +43,27 @@ def main(
     if not project_root.exists() or not project_root.is_dir():
         typer.echo(f"Error: {project_root} is not a valid directory", err=True)
         raise typer.Exit(code=1)
-    gitignore_path = project_root / ".gitignore"
-    if not gitignore_path.exists():
-        typer.echo(f"Error: .gitignore not found in {project_root}", err=True)
-        raise typer.Exit(code=1)
 
     settings.project_root = project_root
     settings.language = language
     load_yaml_config(settings)
+
+    # --- Mode detection --------------------------------------------------
+    # v3 Epic Mode: .tokuye/epic.yaml must exist; .gitignore check is skipped.
+    # Normal mode:  .gitignore must exist.
+    epic_yaml_path = project_root / ".tokuye" / "epic.yaml"
+    if settings.epic_mode:
+        if not epic_yaml_path.exists():
+            typer.echo(
+                f"Error: Epic Mode is enabled but .tokuye/epic.yaml not found in {project_root}",
+                err=True,
+            )
+            raise typer.Exit(code=1)
+    else:
+        gitignore_path = project_root / ".gitignore"
+        if not gitignore_path.exists():
+            typer.echo(f"Error: .gitignore not found in {project_root}", err=True)
+            raise typer.Exit(code=1)
 
     _exec_source = _resolve_source_model_id(settings.bedrock_model_id)
     if "claude-sonnet-4-6" in _exec_source:
@@ -111,8 +124,14 @@ def main(
 
     signal.signal(signal.SIGINT, signal_handler)
 
+    if settings.epic_mode:
+        app_title = "AI Dev Agent [Epic Mode v3]"
+    else:
+        app_title = "AI Dev Agent"
+
     textual_app = ChatInterface(
         settings.project_root,
+        title=app_title,
         log_level=log_level,
         max_steps=settings.max_steps,
     )

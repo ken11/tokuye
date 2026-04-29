@@ -44,6 +44,9 @@ class Settings(BaseSettings):
     
     # --- State machine mode (v2) -----------------------------------------
     state_machine_mode: bool = False
+
+    # --- Epic mode (v3) --------------------------------------------------
+    epic_mode: bool = False
     bedrock_impl_model_id: str = ""        # Developer node; falls back to bedrock_model_id
     impl_model_identifier: str = ""
     bedrock_classifier_model_id: str = ""  # State Classifier node; falls back to bedrock_model_id
@@ -139,6 +142,7 @@ def _apply_yaml_to_settings(
         "bedrock_embedding_model_id",
         "bedrock_plan_model_id",
         "state_machine_mode",
+        "epic_mode",
         "bedrock_impl_model_id",
         "bedrock_repo_description_model_id",
         "bedrock_classifier_model_id",
