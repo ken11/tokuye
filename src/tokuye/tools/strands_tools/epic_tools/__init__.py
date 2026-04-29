@@ -55,10 +55,4 @@ epic_manager_tools = [
     read_lines,
     file_search,
     list_directory,
-    # Issue tools (read-only)
-    issue_list,
-    issue_view,
-    issue_get_comments,
-    # Phase reporting
-    report_phase,
 ]
