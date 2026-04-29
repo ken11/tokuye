@@ -112,21 +112,8 @@ recovery_suggestion: "復旧方法の提案"
 - create_branch, commit_changes
 - repo_summarize, generate_repo_description_tool
 - search_code_repository, manage_code_index
-- report_phase
-
-### フェーズ報告（必須）
-
-作業中は常に report_phase ツールで現在のフェーズを報告すること。
-
-- **thinking**: 調査・分析・設計・計画立案・問題の特定
-- **executing**: ファイル書き込み・パッチ適用・コミット・ブランチ作成
-
-ルール:
-- 作業開始時にまず report_phase("thinking") を呼ぶ
-- フェーズが変わったと判断したら即座に report_phase を呼ぶ
-- 迷ったら thinking にしておく
-- 1つのツール呼び出しごとに報告する必要はない。フェーズの**切り替わり**時だけでよい
-- report_phase ツールが利用可能でない場合、このセクションは無視してよい
+- pr_list, pr_view, pr_diff, pr_review_comment, pr_review_submit, pr_get_comments, submit_pull_request
+- issue_list, issue_view, issue_get_comments, submit_issue, issue_add_comment
 
 ### 優先順位（原則）
 1) repo_summarize（タスク開始時）

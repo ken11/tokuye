@@ -112,21 +112,8 @@ Available tools:
 - create_branch, commit_changes
 - repo_summarize, generate_repo_description_tool
 - search_code_repository, manage_code_index
-- report_phase
-
-### Phase reporting (mandatory)
-
-Always report the current phase using the report_phase tool during work.
-
-- **thinking**: investigation, analysis, design, planning, problem identification
-- **executing**: file writes, patch application, commits, branch creation
-
-Rules:
-- Call report_phase("thinking") at the start of work
-- Call report_phase immediately when the phase changes
-- When in doubt, default to thinking
-- You do not need to report on every single tool call — only at phase **transitions**
-- If the report_phase tool is not available, ignore this section
+- pr_list, pr_view, pr_diff, pr_review_comment, pr_review_submit, pr_get_comments, submit_pull_request
+- issue_list, issue_view, issue_get_comments, submit_issue, issue_add_comment
 
 ### Priority order (default)
 1) repo_summarize (at task start)

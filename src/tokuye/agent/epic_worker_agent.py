@@ -26,7 +26,7 @@ from strands.models import BedrockModel
 from strands.session.file_session_manager import FileSessionManager
 
 from tokuye.prompts.prompt_loader import load_prompt, load_prompt_if_exists
-from tokuye.tools.strands_tools import developer_tools
+from tokuye.tools.strands_tools import all_tools
 from tokuye.utils.config import settings
 
 logger = logging.getLogger(__name__)
@@ -96,7 +96,7 @@ class EpicWorkerAgent:
         # Build agent (no MCP for worker — keeps it lightweight)
         self.agent = Agent(
             model=self.model,
-            tools=developer_tools,
+            tools=all_tools,
             system_prompt=self.system_prompt,
             session_manager=self.session_manager,
             conversation_manager=SummarizingConversationManager(
