@@ -43,6 +43,10 @@ def main(
     if not project_root.exists() or not project_root.is_dir():
         typer.echo(f"Error: {project_root} is not a valid directory", err=True)
         raise typer.Exit(code=1)
+    gitignore_path = project_root / ".gitignore"
+    if not gitignore_path.exists():
+        typer.echo(f"Error: .gitignore not found in {project_root}", err=True)
+        raise typer.Exit(code=1)
 
     settings.project_root = project_root
     settings.language = language
