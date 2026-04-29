@@ -89,7 +89,6 @@ planner_tools = [
 
 developer_tools = [
     read_lines,
-    write_file,
     replace_exact,
     insert_after_exact,
     insert_before_exact,

@@ -8,7 +8,7 @@ Responsibilities:
   - Receive Epic requests from the user
   - Manage Epic working directories via epic_dir_tools
   - Analyze repos via repo_ops (epic-safe variants)
-  - Delegate implementation tasks to EpicWorkerAgent
+  - Delegate implementation tasks to EpicWorkerAgent via run_epic_worker tool
   - Present results to the user and wait for approval at each checkpoint
   - Persist progress to the Epic working directory
 
@@ -22,14 +22,12 @@ from __future__ import annotations
 
 import logging
 import os
-import uuid
 
 from strands import Agent
 from strands.agent.conversation_manager import SummarizingConversationManager
 from strands.models import BedrockModel
 from strands.session.file_session_manager import FileSessionManager
 
-from tokuye.agent.epic_worker_agent import EpicWorkerAgent
 from tokuye.prompts.prompt_loader import load_prompt, load_prompt_if_exists
 from tokuye.tools.strands_tools.epic_tools import epic_manager_tools
 from tokuye.utils.config import settings
@@ -82,13 +80,14 @@ class EpicManagerAgent:
         else:
             self.summary_prompt = load_prompt_if_exists("summary_prompt_en.md")
 
-        # Model
+        # Model — use bedrock_epic_manager_model_id if set, else fall back to bedrock_model_id
+        manager_model_id = settings.bedrock_epic_manager_model_id or settings.bedrock_model_id
         _exec_cache = _supports_prompt_cache(settings.model_identifier)
         _exec_tool_cache = _supports_tool_cache(settings.model_identifier)
         self.model = BedrockModel(
             **({"cache_prompt": "default"} if _exec_cache else {}),
             **({"cache_tools": "default"} if _exec_tool_cache else {}),
-            model_id=settings.bedrock_model_id,
+            model_id=manager_model_id,
             temperature=settings.model_temperature,
         )
 
@@ -104,8 +103,7 @@ class EpicManagerAgent:
         )
 
         # Build the Strands Agent with epic_manager_tools
-        # EpicWorkerAgent is invoked programmatically (not as a Strands tool)
-        # so that we can manage its session lifecycle explicitly.
+        # EpicWorkerAgent is invoked via the run_epic_worker tool.
         self.agent = Agent(
             model=self.model,
             tools=epic_manager_tools,
@@ -117,9 +115,6 @@ class EpicManagerAgent:
             callback_handler=self._callback_handler,
         )
 
-        # Active worker session (one at a time)
-        self._current_worker: EpicWorkerAgent | None = None
-
         self.step_count = 0
         # current_task_branch kept for interface compatibility with ChatInterface
         self.current_task_branch: str = ""
@@ -129,20 +124,7 @@ class EpicManagerAgent:
     # ------------------------------------------------------------------
 
     async def __call__(self, message: str | None = None, **kwargs):
-        """Process a user message.
-
-        The EpicManagerAgent runs as a standard Strands Agent with
-        epic_manager_tools.  EpicWorkerAgent is invoked when the manager
-        decides to delegate a task; this is handled by the manager's own
-        reasoning rather than a fixed dispatch loop here.
-
-        To allow the manager to spawn a worker, we inject a thin
-        ``invoke_epic_worker`` callable into the agent's tool set at
-        construction time.  However, for the initial implementation we keep
-        it simple: the manager uses its tools to manage files and repos,
-        and instructs the user to confirm before each step.  Worker
-        invocation is done by the manager calling the worker tool below.
-        """
+        """Process a user message."""
         self.set_thinking(True)
         try:
             token_tracker.reset_turn()
@@ -151,52 +133,6 @@ class EpicManagerAgent:
             return result
         finally:
             self.set_thinking(False)
-
-    def get_worker(self, epic_id: str, task_id: str) -> EpicWorkerAgent:
-        """Create (or return existing) EpicWorkerAgent for the given task.
-
-        A new worker is created whenever the task_id changes, ensuring
-        1 task = 1 session isolation.
-        """
-        if (
-            self._current_worker is None
-            or self._current_worker.epic_id != epic_id
-            or self._current_worker.task_id != task_id
-        ):
-            self._current_worker = EpicWorkerAgent(
-                epic_id=epic_id,
-                task_id=task_id,
-                add_ai_message=self.add_ai_message,
-                add_system_message=self.add_system_message,
-                set_thinking=self.set_thinking,
-                update_token_usage=self.update_token_usage,
-            )
-            logger.info(
-                "Created new EpicWorkerAgent: epic=%s task=%s", epic_id, task_id
-            )
-        return self._current_worker
-
-    async def invoke_worker(self, epic_id: str, task_id: str, instruction: str) -> str:
-        """Invoke EpicWorkerAgent for a specific task.
-
-        Called by EpicManagerAgent's own reasoning when it decides to
-        delegate a task.  Returns the raw YAML result string.
-
-        Args:
-            epic_id: Epic identifier.
-            task_id: Task identifier.
-            instruction: Full task instruction.
-
-        Returns:
-            Raw YAML result from EpicWorkerAgent.
-        """
-        worker = self.get_worker(epic_id, task_id)
-        self.add_system_message(
-            f"[Epic Worker] Starting task {task_id} for epic '{epic_id}'"
-        )
-        result = await worker(instruction)
-        self.add_system_message(f"[Epic Worker] Task {task_id} finished")
-        return result
 
     async def cleanup(self) -> None:
         """No MCP connections to clean up for EpicManagerAgent."""

@@ -20,24 +20,25 @@ NEXT_ID: int = 0
 LAST_GENERATED_AT: str = ""
 
 
-def _tokuye_dir() -> str:
-    return os.path.join(settings.project_root, ".tokuye")
+def _tokuye_dir(project_root_override: Optional[str] = None) -> str:
+    root = project_root_override if project_root_override is not None else str(settings.project_root)
+    return os.path.join(root, ".tokuye")
 
 
-def _index_path() -> str:
-    return os.path.join(_tokuye_dir(), "faiss.index")
+def _index_path(project_root_override: Optional[str] = None) -> str:
+    return os.path.join(_tokuye_dir(project_root_override), "faiss.index")
 
 
-def _chunks_meta_path() -> str:
-    return os.path.join(_tokuye_dir(), "faiss-chunks.json")
+def _chunks_meta_path(project_root_override: Optional[str] = None) -> str:
+    return os.path.join(_tokuye_dir(project_root_override), "faiss-chunks.json")
 
 
-def _timestamp_path() -> str:
-    return os.path.join(_tokuye_dir(), "repo-summary-timestamp.txt")
+def _timestamp_path(project_root_override: Optional[str] = None) -> str:
+    return os.path.join(_tokuye_dir(project_root_override), "repo-summary-timestamp.txt")
 
 
-def _ensure_dir():
-    os.makedirs(_tokuye_dir(), exist_ok=True)
+def _ensure_dir(project_root_override: Optional[str] = None):
+    os.makedirs(_tokuye_dir(project_root_override), exist_ok=True)
 
 
 def _new_index_ip_idmap(dim: int) -> faiss.IndexIDMap2:
@@ -63,23 +64,23 @@ def _ids_selector(ids: List[int]) -> faiss.IDSelectorBatch:
     return faiss.IDSelectorBatch(np.asarray(ids, dtype=np.int64))
 
 
-def save_index(generated_at: str):
+def save_index(generated_at: str, project_root_override: Optional[str] = None):
     global LAST_GENERATED_AT
     if INDEX is None:
         logger.warning("save_index: INDEX is None; nothing to save.")
         return
-    _ensure_dir()
-    faiss.write_index(INDEX, _index_path())
+    _ensure_dir(project_root_override)
+    faiss.write_index(INDEX, _index_path(project_root_override))
 
     meta_list = []
     for cid, meta in CHUNK_BY_ID.items():
         m = dict(meta)
         m["id"] = cid
         meta_list.append(m)
-    with open(_chunks_meta_path(), "w", encoding="utf-8") as f:
+    with open(_chunks_meta_path(project_root_override), "w", encoding="utf-8") as f:
         json.dump(meta_list, f, ensure_ascii=False)
 
-    with open(_timestamp_path(), "w", encoding="utf-8") as f:
+    with open(_timestamp_path(project_root_override), "w", encoding="utf-8") as f:
         f.write(generated_at or "")
 
     LAST_GENERATED_AT = generated_at or ""
@@ -92,21 +93,21 @@ def save_index(generated_at: str):
     )
 
 
-def _load_index() -> bool:
+def _load_index(project_root_override: Optional[str] = None) -> bool:
     """Load saved index (ignoring freshness). Returns True on success."""
     global INDEX, CHUNK_BY_ID, NEXT_ID, LAST_GENERATED_AT
     t0 = time.perf_counter()
     try:
-        if not os.path.exists(_index_path()):
-            logger.info("No index file found at %s", _index_path())
+        if not os.path.exists(_index_path(project_root_override)):
+            logger.info("No index file found at %s", _index_path(project_root_override))
             return False
 
-        idx = faiss.read_index(_index_path())
+        idx = faiss.read_index(_index_path(project_root_override))
         if not isinstance(idx, faiss.IndexIDMap2):
             idx = faiss.IndexIDMap2(idx)
         INDEX = idx
 
-        with open(_chunks_meta_path(), "r", encoding="utf-8") as f:
+        with open(_chunks_meta_path(project_root_override), "r", encoding="utf-8") as f:
             meta_list = json.load(f)
         CHUNK_BY_ID = {
             int(m["id"]): {k: v for k, v in m.items() if k != "id"}
@@ -138,14 +139,14 @@ def _load_index() -> bool:
         return False
 
 
-def load_index_if_fresh(current_generated_at: str | None) -> bool:
+def load_index_if_fresh(current_generated_at: str | None, project_root_override: Optional[str] = None) -> bool:
     """
     Load if saved generatedAt matches current.
     Return False if not matched (caller should rebuild/update diff).
     """
-    if not os.path.exists(_index_path()):
+    if not os.path.exists(_index_path(project_root_override)):
         return False
-    ok = _load_index()
+    ok = _load_index(project_root_override)
     if not ok:
         return False
     fresh = (current_generated_at or "") == (LAST_GENERATED_AT or "")
@@ -158,12 +159,12 @@ def load_index_if_fresh(current_generated_at: str | None) -> bool:
     return fresh
 
 
-def try_load() -> bool:
+def try_load(project_root_override: Optional[str] = None) -> bool:
     """Try to load if it exists, regardless of freshness."""
-    return _load_index()
+    return _load_index(project_root_override)
 
 
-def build_index(chunks: List[Dict], generated_at: str | None) -> Dict:
+def build_index(chunks: List[Dict], generated_at: str | None, project_root_override: Optional[str] = None) -> Dict:
     """
     Build new IDMap index with received chunks (overwrite).
     Returns: statistics
@@ -175,7 +176,7 @@ def build_index(chunks: List[Dict], generated_at: str | None) -> Dict:
 
     if not chunks:
         INDEX = _new_index_ip_idmap(embedder.EMBED_DIM)
-        save_index(generated_at or "")
+        save_index(generated_at or "", project_root_override)
         logger.warning("Build index: no chunks provided; created empty index.")
         return {"total_chunks": 0, "dim": embedder.EMBED_DIM, "built_in_sec": 0.0}
 
@@ -199,7 +200,7 @@ def build_index(chunks: List[Dict], generated_at: str | None) -> Dict:
     for cid, meta in metas:
         CHUNK_BY_ID[cid] = meta
 
-    save_index(generated_at or "")
+    save_index(generated_at or "", project_root_override)
     t1 = time.perf_counter()
     logger.info(
         "Build index completed: vectors=%s, dim=%s, files=%s (%.2fs)",
@@ -283,7 +284,7 @@ def remove_by_ids(ids: List[int]) -> int:
     return removed
 
 
-def update_index_diff(latest_chunks: List[Dict], new_generated_at: str | None) -> Dict:
+def update_index_diff(latest_chunks: List[Dict], new_generated_at: str | None, project_root_override: Optional[str] = None) -> Dict:
     """
     Take diff between existing index and latest chunks, execute additions/deletions.
     - Update judgment per file (presence of path and mtime difference)
@@ -294,7 +295,7 @@ def update_index_diff(latest_chunks: List[Dict], new_generated_at: str | None) -
 
     if INDEX is None:
         # Full build if no existing index
-        stats = build_index(latest_chunks, new_generated_at or "")
+        stats = build_index(latest_chunks, new_generated_at or "", project_root_override)
         return {"action": "build", **stats}
 
     # Old: mtime per file (maximum)
@@ -334,7 +335,7 @@ def update_index_diff(latest_chunks: List[Dict], new_generated_at: str | None) -
     chunks_to_add = [ch for ch in latest_chunks if ch["path"] in files_to_add]
     added_vecs = add_chunks(chunks_to_add)
 
-    save_index(new_generated_at or "")
+    save_index(new_generated_at or "", project_root_override)
     t1 = time.perf_counter()
 
     logger.info(

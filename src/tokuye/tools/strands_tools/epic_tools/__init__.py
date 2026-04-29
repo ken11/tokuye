@@ -32,6 +32,7 @@ from tokuye.tools.strands_tools.issue_tools import (
     issue_list,
     issue_view,
 )
+from tokuye.tools.strands_tools.epic_tools.worker_tool import run_epic_worker
 from tokuye.tools.strands_tools.phase_tool import report_phase
 
 epic_manager_tools = [
@@ -48,6 +49,8 @@ epic_manager_tools = [
     repo_description_epic,
     manage_code_index_epic,
     search_code_epic,
+    # Worker delegation
+    run_epic_worker,
     # Read-only file tools (for reading repo contents)
     read_lines,
     file_search,

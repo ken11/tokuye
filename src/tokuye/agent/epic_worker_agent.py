@@ -10,18 +10,15 @@ Usage
     worker = EpicWorkerAgent(
         epic_id="auth-cognito-migration",
         task_id="T001",
-        add_ai_message=...,
-        add_system_message=...,
-        set_thinking=...,
-        update_token_usage=...,
     )
-    result_yaml = await worker(task_instruction)
+    result_yaml = worker(task_instruction)
 """
 
 from __future__ import annotations
 
 import logging
 import os
+from typing import Callable, Optional
 
 from strands import Agent
 from strands.agent.conversation_manager import SummarizingConversationManager
@@ -47,17 +44,21 @@ class EpicWorkerAgent:
     """Single-task agent for Epic Mode.
 
     One instance = one task session.
-    Create a new instance for each task.
+    Create a new instance for each task (or reuse for the same task to continue
+    the session).
+
+    Callbacks are optional; when omitted the worker runs silently and returns
+    the result string directly.
     """
 
     def __init__(
         self,
         epic_id: str,
         task_id: str,
-        add_ai_message,
-        add_system_message,
-        set_thinking,
-        update_token_usage,
+        add_ai_message: Optional[Callable] = None,
+        add_system_message: Optional[Callable] = None,
+        set_thinking: Optional[Callable] = None,
+        update_token_usage: Optional[Callable] = None,
     ) -> None:
         self.epic_id = epic_id
         self.task_id = task_id
@@ -113,24 +114,26 @@ class EpicWorkerAgent:
         )
 
     def _callback_handler(self, **kwargs) -> None:
-        """Forward streaming events to TUI callbacks."""
+        """Forward streaming events to TUI callbacks (no-op when callbacks are None)."""
         event = kwargs.get("event")
         if event == "message":
             data = kwargs.get("data", {})
             content = data.get("content", "")
-            if content:
+            if content and self.add_ai_message:
                 self.add_ai_message(content)
         elif event == "thinking":
-            self.set_thinking(kwargs.get("data", False))
+            if self.set_thinking:
+                self.set_thinking(kwargs.get("data", False))
         elif event == "usage":
             data = kwargs.get("data", {})
             input_tokens = data.get("input_tokens", 0)
             output_tokens = data.get("output_tokens", 0)
-            self.update_token_usage(
-                f"Worker [{self.task_id}] — in: {input_tokens}, out: {output_tokens}"
-            )
+            if self.update_token_usage:
+                self.update_token_usage(
+                    f"Worker [{self.task_id}] — in: {input_tokens}, out: {output_tokens}"
+                )
 
-    async def __call__(self, instruction: str) -> str:
+    def __call__(self, instruction: str) -> str:
         """Run the worker with *instruction* and return the raw response text.
 
         Args:
@@ -139,9 +142,10 @@ class EpicWorkerAgent:
         Returns:
             Raw response string (expected to be YAML by the system prompt).
         """
-        self.set_thinking(True)
+        if self.set_thinking:
+            self.set_thinking(True)
         try:
-            result = await self.agent.invoke_async(instruction)
+            result = self.agent(instruction)
             # Extract text content from AgentResult
             if hasattr(result, "message") and result.message:
                 content = result.message.get("content", [])
@@ -154,4 +158,5 @@ class EpicWorkerAgent:
                     return content
             return str(result)
         finally:
-            self.set_thinking(False)
+            if self.set_thinking:
+                self.set_thinking(False)
