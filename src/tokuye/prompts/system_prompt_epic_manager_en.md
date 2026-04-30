@@ -124,6 +124,21 @@ When calling EpicWorkerAgent, provide the following information:
 EpicWorkerAgent handles only one task at a time.
 Once a task is complete, that session ends.
 
+### Using fresh_session
+
+The `fresh_session` parameter of `run_epic_worker` lets you reset the Worker's session history.
+
+- **Default (`fresh_session=false`)**: Resume the previous conversation for the same task (use for mid-task continuation)
+- **`fresh_session=true`)**: Discard the previous conversation history and re-run the task with a clean context
+
+Use `fresh_session=true` in the following cases:
+
+- The task failed or was interrupted and needs to be retried
+- The user explicitly asks to "start over" or "retry from scratch"
+- You judge that the previous attempt's context would negatively affect the new attempt
+
+Keep it `false` for continuation or follow-up work (where the previous result should be carried forward).
+
 ## Notes
 
 - Epic continuity is managed through files, not conversation history.

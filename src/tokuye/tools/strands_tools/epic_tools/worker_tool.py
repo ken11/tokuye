@@ -38,10 +38,12 @@ logger = logging.getLogger(__name__)
         "and returns a YAML result string. "
         "repo_name must be a key defined in .tokuye/epic.yaml. "
         "Calling with the same epic_id + task_id resumes the existing session; "
-        "changing task_id starts a new isolated session."
+        "changing task_id starts a new isolated session. "
+        "Set fresh_session=true to discard the previous session history and "
+        "start the task from scratch (use when retrying a failed or incomplete task)."
     ),
 )
-def run_epic_worker(epic_id: str, task_id: str, repo_name: str, instruction: str) -> str:
+def run_epic_worker(epic_id: str, task_id: str, repo_name: str, instruction: str, fresh_session: bool = False) -> str:
     """Invoke EpicWorkerAgent for a specific task.
 
     Args:
@@ -51,11 +53,19 @@ def run_epic_worker(epic_id: str, task_id: str, repo_name: str, instruction: str
             Used to resolve the absolute path of the target repository and
             to sandbox all Worker tools to that directory.
         instruction: Full task instruction for the worker.
+        fresh_session: If True, discard any existing session history for this
+            task and start with a clean context.  Use this when retrying a
+            failed or incomplete task to avoid polluting the new attempt with
+            stale conversation history.  Defaults to False (resume existing
+            session).
 
     Returns:
         Raw YAML result string from EpicWorkerAgent.
     """
-    logger.info("run_epic_worker: epic=%s task=%s repo=%s", epic_id, task_id, repo_name)
+    logger.info(
+        "run_epic_worker: epic=%s task=%s repo=%s fresh_session=%s",
+        epic_id, task_id, repo_name, fresh_session,
+    )
     repo_root = resolve_repo_path(repo_name)
-    worker = EpicWorkerAgent(epic_id=epic_id, task_id=task_id, repo_root=repo_root)
+    worker = EpicWorkerAgent(epic_id=epic_id, task_id=task_id, repo_root=repo_root, fresh_session=fresh_session)
     return worker(instruction)

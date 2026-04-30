@@ -75,6 +75,7 @@ class EpicWorkerAgent:
         epic_id: str,
         task_id: str,
         repo_root: Path,
+        fresh_session: bool = False,
     ) -> None:
         self.epic_id = epic_id
         self.task_id = task_id
@@ -110,6 +111,18 @@ class EpicWorkerAgent:
             )
         os.makedirs(session_dir, exist_ok=True)
         session_id = f"epic-{epic_id}-{task_id}"
+
+        # fresh_session=True: discard any existing session file so the Worker
+        # starts with a clean slate (use when retrying a failed task).
+        if fresh_session:
+            session_file = os.path.join(session_dir, f"{session_id}.json")
+            if os.path.exists(session_file):
+                os.remove(session_file)
+                logger.info(
+                    "EpicWorkerAgent: cleared session file for fresh start (%s)",
+                    session_file,
+                )
+
         self.session_manager = FileSessionManager(
             session_id=session_id, storage_dir=session_dir
         )
