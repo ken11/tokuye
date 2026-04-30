@@ -38,6 +38,7 @@ from strands.session.file_session_manager import FileSessionManager
 from tokuye.prompts.prompt_loader import load_prompt, load_prompt_if_exists
 from tokuye.tools.strands_tools.epic_tools.worker_tools import make_epic_worker_tools
 from tokuye.utils.config import settings
+from tokuye.utils.token_tracker import token_tracker
 
 logger = logging.getLogger(__name__)
 
@@ -141,6 +142,9 @@ class EpicWorkerAgent:
             Raw response string (expected to be YAML by the system prompt).
         """
         result = self.agent(instruction)
+        # Merge Worker token usage into the shared token_tracker so that
+        # EpicManagerAgent's TUI display reflects the full cost of the turn.
+        self._merge_token_usage(result)
         # Extract text content from AgentResult
         if hasattr(result, "message") and result.message:
             content = result.message.get("content", [])
@@ -152,3 +156,33 @@ class EpicWorkerAgent:
             if isinstance(content, str):
                 return content
         return str(result)
+
+    def _merge_token_usage(self, result) -> None:
+        """Merge EpicWorkerAgent token usage into the global token_tracker.
+
+        Called after each ``self.agent(instruction)`` invocation so that the
+        Worker's token consumption is visible in the TUI cost display alongside
+        the Manager's own usage.
+
+        Uses ``latest_agent_invocation.usage`` which accumulates all event-loop
+        cycles within a single ``__call__``.  Falls back silently on any error
+        so that a Strands API change never breaks the Worker's core behaviour.
+        """
+        try:
+            from strands.agent import AgentResult
+            if not isinstance(result, AgentResult):
+                return
+            latest = result.metrics.latest_agent_invocation
+            if latest is None:
+                return
+            token_tracker.add_usage(
+                latest.usage,
+                model_identifier=settings.model_identifier,
+            )
+            logger.debug(
+                "EpicWorkerAgent[%s/%s]: merged token usage into tracker",
+                self.epic_id,
+                self.task_id,
+            )
+        except Exception as e:
+            logger.debug("EpicWorkerAgent token usage merge failed: %s", e)
