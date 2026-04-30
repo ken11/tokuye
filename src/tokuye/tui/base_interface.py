@@ -27,6 +27,26 @@ from textual.widgets import Button, Footer, Header, Label, Switch, TextArea
 logger = logging.getLogger(__name__)
 
 
+def _build_agent(thread_id: str, max_steps: int, add_ai_message, add_system_message, set_thinking, update_token_usage):
+    """Instantiate the appropriate agent based on the current mode setting.
+
+    - epic_mode=True  → EpicManagerAgent (v3)
+    - otherwise       → StrandsAgent (v1 / v2)
+    """
+    common_kwargs = dict(
+        thread_id=thread_id,
+        max_steps=max_steps,
+        add_ai_message=add_ai_message,
+        add_system_message=add_system_message,
+        set_thinking=set_thinking,
+        update_token_usage=update_token_usage,
+    )
+    if settings.epic_mode:
+        from tokuye.agent.epic_manager_agent import EpicManagerAgent
+        return EpicManagerAgent(**common_kwargs)
+    return StrandsAgent(**common_kwargs)
+
+
 class ChatInterface(App):
 
     CSS_PATH = Path(__file__).parent / "chat_interface.css"
@@ -51,7 +71,7 @@ class ChatInterface(App):
         self.initial_max_steps = max_steps
         self.current_max_steps = self.initial_max_steps
         self.thread_id = str(uuid.uuid4())
-        self.agent = StrandsAgent(
+        self.agent = _build_agent(
             thread_id=self.thread_id,
             max_steps=self.current_max_steps,
             add_ai_message=lambda msg: self.call_later(self.add_ai_message, msg),
@@ -196,7 +216,7 @@ class ChatInterface(App):
             chat_log.mount(system_message.to_widget())
 
         self.thread_id = str(uuid.uuid4())
-        self.agent = StrandsAgent(
+        self.agent = _build_agent(
             thread_id=self.thread_id,
             max_steps=self.current_max_steps,
             add_ai_message=lambda msg: self.call_later(self.add_ai_message, msg),
@@ -334,6 +354,13 @@ class ChatInterface(App):
 
     @on(Switch.Changed, "#continuation-switch")
     def handle_continuation_switch_changed(self, event: Switch.Changed) -> None:
+        if settings.epic_mode:
+            # Continuation mode is not applicable in Epic Mode
+            self.query_one("#continuation-switch", Switch).value = False
+            self.add_system_message(
+                "Continuation mode is not available in Epic Mode."
+            )
+            return
         if event.value:
             try:
                 from git import Repo

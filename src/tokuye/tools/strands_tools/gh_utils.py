@@ -7,6 +7,7 @@ duplicating the subprocess wrapper.
 
 import logging
 import subprocess
+from pathlib import Path
 from typing import Optional
 
 from tokuye.utils.config import settings
@@ -41,6 +42,64 @@ def run_gh(
         result = subprocess.run(
             cmd,
             cwd=settings.project_root,
+            input=stdin_input,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+    except FileNotFoundError:
+        raise RuntimeError(
+            "gh CLI is not installed. "
+            "Install it from https://cli.github.com/ and run `gh auth login`."
+        )
+    except subprocess.TimeoutExpired:
+        raise RuntimeError("gh command timed out after 60 seconds.")
+
+    if result.returncode != 0:
+        stderr = result.stderr.strip()
+        raise RuntimeError(f"gh command failed (exit {result.returncode}): {stderr}")
+
+    output = result.stdout
+    if len(output) > max_output_chars:
+        output = (
+            output[:max_output_chars]
+            + f"\n\n... (truncated at {max_output_chars} chars)"
+        )
+    return output
+
+
+def run_gh_for(
+    repo_root: Path,
+    args: list[str],
+    *,
+    stdin_input: Optional[str] = None,
+    max_output_chars: int = 80_000,
+) -> str:
+    """Run a ``gh`` CLI command with *cwd* set to *repo_root*.
+
+    Identical to :func:`run_gh` but accepts an explicit *repo_root* instead of
+    using ``settings.project_root``.  Used by epic-worker tool variants so that
+    GitHub operations target the correct repository.
+
+    Args:
+        repo_root: Absolute path to the target repository root.
+        args: Arguments to pass to ``gh`` (e.g. ``["pr", "list"]``).
+        stdin_input: Optional string to feed to stdin.
+        max_output_chars: Truncate stdout beyond this limit.
+
+    Returns:
+        stdout string from the command.
+
+    Raises:
+        RuntimeError: If ``gh`` is not found or the command fails.
+    """
+    cmd = ["gh"] + args
+    logger.info("Running (repo=%s): %s", repo_root, " ".join(cmd))
+
+    try:
+        result = subprocess.run(
+            cmd,
+            cwd=str(repo_root),
             input=stdin_input,
             capture_output=True,
             text=True,

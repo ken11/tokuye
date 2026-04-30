@@ -378,3 +378,185 @@ def create_new_file(file_path: str, content: str) -> str:
         return f"File created successfully: {file_path}"
     except Exception as e:
         return f"Error: {str(e)}"
+
+# ---------------------------------------------------------------------------
+# Internal _for(root) helpers — used by make_epic_worker_tools
+# These are identical to the @tool functions above but accept an explicit
+# root: Path instead of reading settings.project_root.
+# ---------------------------------------------------------------------------
+
+def file_search_for(root: Path, pattern: str, dir_path: str = ".") -> str:
+    import glob
+    try:
+        search_dir = get_validated_relative_path(root, dir_path)
+    except FileValidationError:
+        return f"Error: Access denied to dir_path: {dir_path}. Permission granted exclusively to the current working directory"
+    try:
+        original_dir = os.getcwd()
+        os.chdir(search_dir)
+        matches = glob.glob(pattern, recursive=True)
+        os.chdir(original_dir)
+        filtered_matches = []
+        for match in matches:
+            abs_path = search_dir / match
+            if not _is_path_ignored(root, abs_path):
+                filtered_matches.append(match)
+        if not filtered_matches:
+            return f"No files matching '{pattern}' found in '{dir_path}'."
+        return "\n".join(filtered_matches)
+    except Exception as e:
+        if "original_dir" in locals():
+            os.chdir(original_dir)
+        return f"Error: {str(e)}"
+
+
+def copy_file_for(root: Path, source_path: str, destination_path: str) -> str:
+    try:
+        src_abs = get_validated_relative_path(root, source_path)
+    except FileValidationError:
+        return f"Error: Access denied to source_path: {source_path}. Permission granted exclusively to the current working directory"
+    try:
+        dst_abs = get_validated_relative_path(root, destination_path)
+    except FileValidationError:
+        return f"Error: Access denied to destination_path: {destination_path}. Permission granted exclusively to the current working directory"
+    if _is_path_ignored(root, src_abs):
+        return f"Error: Access denied to source_path: {source_path}. File is matched by .gitignore patterns."
+    if _is_path_ignored(root, dst_abs):
+        return f"Error: Access denied to destination_path: {destination_path}. File is matched by .gitignore patterns."
+    try:
+        dst_abs.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src_abs, dst_abs, follow_symlinks=False)
+        return f"File copied successfully from {source_path} to {destination_path}."
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+
+def move_file_for(root: Path, source_path: str, destination_path: str) -> str:
+    try:
+        src_abs = get_validated_relative_path(root, source_path)
+    except FileValidationError:
+        return f"Error: Access denied to source_path: {source_path}. Permission granted exclusively to the current working directory"
+    try:
+        dst_abs = get_validated_relative_path(root, destination_path)
+    except FileValidationError:
+        return f"Error: Access denied to destination_path: {destination_path}. Permission granted exclusively to the current working directory"
+    if _is_path_ignored(root, src_abs):
+        return f"Error: Access denied to source_path: {source_path}. File is matched by .gitignore patterns."
+    if _is_path_ignored(root, dst_abs):
+        return f"Error: Access denied to destination_path: {destination_path}. File is matched by .gitignore patterns."
+    try:
+        dst_abs.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(src_abs, dst_abs)
+        return f"File moved successfully from {source_path} to {destination_path}."
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+
+def file_delete_for(root: Path, file_path: str) -> str:
+    try:
+        abs_path = get_validated_relative_path(root, file_path)
+    except FileValidationError:
+        return f"Error: Access denied to file_path: {file_path}. Permission granted exclusively to the current working directory"
+    if _is_path_ignored(root, abs_path):
+        return f"Error: Access denied to file_path: {file_path}. File is matched by .gitignore patterns."
+    try:
+        if not abs_path.exists():
+            return f"Error: File {file_path} does not exist."
+        if abs_path.is_dir():
+            return f"Error: {file_path} is a directory. Use a directory removal tool instead."
+        abs_path.unlink()
+        return f"File {file_path} deleted successfully."
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+
+def list_directory_for(root: Path, dir_path: str = ".") -> str:
+    try:
+        abs_path = get_validated_relative_path(root, dir_path)
+    except FileValidationError:
+        return f"Error: Access denied to dir_path: {dir_path}. Permission granted exclusively to the current working directory"
+    if not abs_path.exists():
+        return f"Error: Directory {dir_path} does not exist."
+    if not abs_path.is_dir():
+        return f"Error: {dir_path} is not a directory."
+    try:
+        entries = list(abs_path.iterdir())
+        filtered_entries = []
+        for entry in entries:
+            if not _is_path_ignored(root, entry):
+                entry_name = entry.name
+                if entry.is_dir():
+                    entry_name += "/"
+                filtered_entries.append(entry_name)
+        filtered_entries.sort(key=lambda x: (0 if x.endswith("/") else 1, x))
+        if not filtered_entries:
+            return f"Directory {dir_path} is empty or all entries are ignored by .gitignore."
+        return "\n".join(filtered_entries)
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+
+def read_lines_for(root: Path, file_path: str, start_line: int, end_line: int) -> str:
+    try:
+        abs_path = get_validated_relative_path(root, file_path)
+    except FileValidationError:
+        return f"Error: Access denied to file_path: {file_path}. Permission granted exclusively to the current working directory"
+    if _is_path_ignored(root, abs_path):
+        return f"Error: Access denied to file_path: {file_path}. File is matched by .gitignore patterns."
+    if start_line < 1:
+        return f"Error: start_line must be at least 1, got {start_line}"
+    if end_line < start_line:
+        return f"Error: end_line ({end_line}) must be greater than or equal to start_line ({start_line})"
+    if not abs_path.exists():
+        return f"Error: no such file or directory: {file_path}"
+    if abs_path.is_dir():
+        return f"Error: {file_path} is a directory."
+    try:
+        lines: list[str] = []
+        with abs_path.open("r", encoding="utf-8") as handle:
+            for i, line in enumerate(handle, 1):
+                if i < start_line:
+                    continue
+                if i > end_line:
+                    break
+                lines.append(line)
+        if not lines:
+            return f"No lines found in range {start_line}-{end_line} in file {file_path}"
+        return "".join(lines)
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+
+def write_file_for(root: Path, file_path: str, text: str, append: bool = False) -> str:
+    try:
+        abs_path = get_validated_relative_path(root, file_path)
+    except FileValidationError:
+        return f"Error: Access denied to file_path: {file_path}. Permission granted exclusively to the current working directory"
+    if _is_path_ignored(root, abs_path):
+        return f"Error: Access denied to file_path: {file_path}. File is matched by .gitignore patterns."
+    try:
+        abs_path.parent.mkdir(parents=True, exist_ok=True)
+        mode = "a" if append else "w"
+        with abs_path.open(mode, encoding="utf-8") as handle:
+            handle.write(text)
+        return f"File written successfully to {file_path}."
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+
+def create_new_file_for(root: Path, file_path: str, content: str) -> str:
+    try:
+        abs_path = get_validated_relative_path(root, file_path)
+    except FileValidationError:
+        return f"Error: Access denied to file_path: {file_path}. Permission granted exclusively to the current working directory"
+    if _is_path_ignored(root, abs_path):
+        return f"Error: Access denied to file_path: {file_path}. File is matched by .gitignore patterns."
+    if abs_path.exists():
+        return f"Error: file already exists: {file_path}"
+    try:
+        abs_path.parent.mkdir(parents=True, exist_ok=True)
+        abs_path.write_text(content, encoding="utf-8")
+        return f"File created successfully: {file_path}"
+    except Exception as e:
+        return f"Error: {str(e)}"
+
