@@ -107,7 +107,13 @@ def manage_code_index_epic(repo_name: str, action: str = "update") -> str:
 
     Args:
         repo_name: Key from epic.yaml repos (e.g. 'backend').
-        action: 'build', 'update', or 'rebuild'.
+        action: Action to perform
+            - "update": Differential update (detect and apply additions/updates/deletions).
+                        Use this by default in almost all cases.
+            - "build": Build new if doesn't exist (do nothing if existing and fresh).
+                       Use only when the index is missing or suspected to be corrupted.
+            - "rebuild": Force full rebuild (discard existing and recreate).
+                         Use only when explicitly instructed or the index is clearly broken.
 
     Returns:
         Summary string of execution result.
