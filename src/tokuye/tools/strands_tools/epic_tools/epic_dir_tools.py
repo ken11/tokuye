@@ -33,10 +33,21 @@ logger = logging.getLogger(__name__)
 
 
 def _epic_dir(epic_id: str) -> Path:
-    """Return the absolute path of the epic working directory."""
+    """Return the absolute path of the epic working directory.
+
+    Raises ValueError if *epic_id* would escape the epics base directory
+    (e.g. via path traversal like '../../etc').
+    """
     if settings.project_root is None:
         raise ValueError("settings.project_root is not set")
-    return settings.project_root / "epics" / epic_id
+    base = (settings.project_root / "epics").resolve()
+    target = (base / epic_id).resolve()
+    if not target.is_relative_to(base):
+        raise ValueError(
+            f"epic_id '{epic_id}' escapes the epics directory. "
+            "Use a simple identifier (e.g. 'auth-migration')."
+        )
+    return target
 
 
 def _ensure_epic_dir(epic_id: str) -> Path:
@@ -278,3 +289,136 @@ def read_epic_file(epic_id: str, filename: str) -> str:
         return f"File not found: {target}"
 
     return target.read_text(encoding="utf-8")
+
+# ---------------------------------------------------------------------------
+# Epic management directory — scoped read-only tools for EpicManagerAgent
+# ---------------------------------------------------------------------------
+# These tools are intentionally restricted to <project_root> (the Epic
+# management directory).  EpicManagerAgent must NOT use the standard
+# read_lines / list_directory tools, which are bound to settings.project_root
+# and could be pointed at arbitrary target repositories.
+# ---------------------------------------------------------------------------
+
+
+def _epic_mgmt_root() -> Path:
+    """Return the resolved Epic management project_root."""
+    if settings.project_root is None:
+        raise ValueError("settings.project_root is not set")
+    return settings.project_root.resolve()
+
+
+@tool(
+    name="read_lines_epic",
+    description=(
+        "Read specific lines from a UTF-8 text file inside the Epic management "
+        "directory (project_root). "
+        "Access is strictly limited to the Epic management directory — "
+        "individual target repositories are NOT accessible via this tool. "
+        "Line numbers are 1-indexed and inclusive."
+    ),
+)
+def read_lines_epic(file_path: str, start_line: int, end_line: int) -> str:
+    """Read lines from a file inside the Epic management directory.
+
+    Args:
+        file_path: Path relative to the Epic management project_root.
+        start_line: Start line number (1-indexed).
+        end_line: End line number (1-indexed, inclusive).
+
+    Returns:
+        The joined text of the specified line range, or an error message.
+    """
+    from tokuye.tools.strands_tools.utils import (
+        FileValidationError,
+        get_validated_relative_path,
+    )
+
+    root = _epic_mgmt_root()
+
+    try:
+        abs_path = get_validated_relative_path(root, file_path)
+    except FileValidationError:
+        return (
+            f"Error: Access denied to '{file_path}'. "
+            "Access is limited to the Epic management directory."
+        )
+
+    if start_line < 1:
+        return f"Error: start_line must be at least 1, got {start_line}"
+    if end_line < start_line:
+        return f"Error: end_line ({end_line}) must be >= start_line ({start_line})"
+    if not abs_path.exists():
+        return f"Error: no such file or directory: {file_path}"
+    if abs_path.is_dir():
+        return f"Error: {file_path} is a directory."
+
+    try:
+        lines: list[str] = []
+        with abs_path.open("r", encoding="utf-8") as handle:
+            for i, line in enumerate(handle, 1):
+                if i < start_line:
+                    continue
+                if i > end_line:
+                    break
+                lines.append(line)
+        if not lines:
+            return f"No lines found in range {start_line}-{end_line} in {file_path}"
+        return "".join(lines)
+    except Exception as e:
+        return f"Error: {e}"
+
+
+@tool(
+    name="list_directory_epic",
+    description=(
+        "List files and directories inside the Epic management directory "
+        "(project_root). "
+        "Access is strictly limited to the Epic management directory — "
+        "individual target repositories are NOT accessible via this tool."
+    ),
+)
+def list_directory_epic(dir_path: str = ".") -> str:
+    """List entries inside the Epic management directory.
+
+    Args:
+        dir_path: Path relative to the Epic management project_root
+                  (default: project_root itself).
+
+    Returns:
+        Newline-separated list of entries, or an error message.
+    """
+    from tokuye.tools.strands_tools.utils import (
+        FileValidationError,
+        get_validated_relative_path,
+    )
+
+    root = _epic_mgmt_root()
+
+    try:
+        abs_path = get_validated_relative_path(root, dir_path)
+    except FileValidationError:
+        return (
+            f"Error: Access denied to '{dir_path}'. "
+            "Access is limited to the Epic management directory."
+        )
+
+    if not abs_path.exists():
+        return f"Error: Directory '{dir_path}' does not exist."
+    if not abs_path.is_dir():
+        return f"Error: '{dir_path}' is not a directory."
+
+    try:
+        entries = sorted(
+            abs_path.iterdir(),
+            key=lambda e: (0 if e.is_dir() else 1, e.name),
+        )
+        names = [
+            (e.name + "/" if e.is_dir() else e.name)
+            for e in entries
+        ]
+        if not names:
+            return f"Directory '{dir_path}' is empty."
+        return "\n".join(names)
+    except Exception as e:
+        return f"Error: {e}"
+

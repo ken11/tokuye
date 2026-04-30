@@ -8,12 +8,14 @@ Exports:
 
 from tokuye.tools.strands_tools.epic_tools.epic_dir_tools import (
     create_epic_dir,
+    list_directory_epic,
     read_epic_file,
+    read_lines_epic,
+    save_epic_decisions,
     save_epic_plan,
     save_epic_tasks,
     save_task_result,
     update_epic_progress,
-    save_epic_decisions,
 )
 from tokuye.tools.strands_tools.epic_tools.repo_ops import (
     manage_code_index_epic,
@@ -22,12 +24,6 @@ from tokuye.tools.strands_tools.epic_tools.repo_ops import (
     search_code_epic,
 )
 
-# Read-only / investigation tools shared from the standard tool set
-from tokuye.tools.strands_tools.file_management import (
-    file_search,
-    list_directory,
-    read_lines,
-)
 from tokuye.tools.strands_tools.issue_tools import (
     issue_get_comments,
     issue_list,
@@ -53,8 +49,7 @@ epic_manager_tools = [
     search_code_epic,
     # Worker delegation
     run_epic_worker,
-    # Read-only file tools (for reading repo contents)
-    read_lines,
-    file_search,
-    list_directory,
+    # Read-only file tools scoped to the Epic management directory only
+    read_lines_epic,
+    list_directory_epic,
 ]
