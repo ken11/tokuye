@@ -32,6 +32,7 @@ from pathlib import Path
 
 from strands import Agent
 from strands.agent.conversation_manager import SummarizingConversationManager
+from strands.handlers.callback_handler import null_callback_handler
 from strands.models import BedrockModel
 from strands.session.file_session_manager import FileSessionManager
 
@@ -130,6 +131,7 @@ class EpicWorkerAgent:
             conversation_manager=SummarizingConversationManager(
                 summarization_system_prompt=self.summary_prompt
             ),
+            callback_handler=null_callback_handler,
         )
 
     def __call__(self, instruction: str) -> str:

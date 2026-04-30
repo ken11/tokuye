@@ -804,6 +804,4 @@ def make_epic_worker_tools(repo_root: Path) -> list:
         _issue_get_comments,
         _submit_issue,
         _issue_add_comment,
-        # Phase (stateless)
-        report_phase,
     ]
