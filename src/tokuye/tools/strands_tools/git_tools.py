@@ -121,3 +121,91 @@ def git_push() -> str:
         )
     except Exception as e:
         return f"Error pushing branch: {str(e)}"
+
+
+# ---------------------------------------------------------------------------
+# Internal _for(root) helpers — used by make_epic_worker_tools
+# Accept an explicit root: Path instead of reading settings.project_root.
+# ---------------------------------------------------------------------------
+
+def create_branch_for(root: Path, name: str, pr_branch_prefix: str = "") -> str:
+    """Create a branch in the repository at *root*.
+
+    Args:
+        root: Absolute path to the target repository root.
+        name: Branch name (prefix will be prepended if pr_branch_prefix is set).
+        pr_branch_prefix: Optional prefix (e.g. 'tokuye/').
+
+    Returns:
+        Creation result message.
+    """
+    try:
+        repo = Repo(root)
+        name = pr_branch_prefix + name.replace(" ", "-")
+        existing_branches = [b.name for b in repo.branches]
+        branch_name = name
+        counter = 1
+        while branch_name in existing_branches:
+            branch_name = f"{name}-{counter}"
+            counter += 1
+        new_branch = repo.create_head(branch_name)
+        new_branch.checkout()
+        return f"Created and checked out new branch '{branch_name}'"
+    except Exception as e:
+        return f"Error creating branch: {str(e)}"
+
+
+def commit_changes_for(root: Path, message: str) -> str:
+    """Stage all changes and commit in the repository at *root*.
+
+    Args:
+        root: Absolute path to the target repository root.
+        message: Commit message.
+
+    Returns:
+        List of committed files.
+    """
+    try:
+        repo = Repo(root)
+        changed_files = [item.a_path for item in repo.index.diff(None)]
+        untracked_files = repo.untracked_files
+        if not changed_files and not untracked_files:
+            return "No changes to commit."
+        repo.git.add(".")
+        commit = repo.index.commit(message)
+        all_files = sorted(changed_files + untracked_files)
+        files_str = "\n- " + "\n- ".join(all_files) if all_files else ""
+        return f"Committed to branch '{repo.active_branch.name}' (SHA: {commit.hexsha}):{files_str}"
+    except Exception as e:
+        return f"Error committing changes: {str(e)}"
+
+
+def git_push_for(root: Path) -> str:
+    """Push the current branch to origin in the repository at *root*.
+
+    Args:
+        root: Absolute path to the target repository root.
+
+    Returns:
+        Result message.
+    """
+    remote = "origin"
+    try:
+        repo = Repo(root)
+        branch_name = repo.active_branch.name
+        push_infos = repo.remote(remote).push(
+            refspec=f"{branch_name}:{branch_name}",
+            set_upstream=True,
+        )
+        messages = []
+        for info in push_infos:
+            if info.flags & info.ERROR:
+                return f"Error pushing branch '{branch_name}' to '{remote}': {info.summary}"
+            messages.append(info.summary.strip())
+        summary = "; ".join(messages) if messages else "(no summary)"
+        return (
+            f"Pushed branch '{branch_name}' to '{remote}' successfully.\n"
+            f"  Summary: {summary}"
+        )
+    except Exception as e:
+        return f"Error pushing branch: {str(e)}"

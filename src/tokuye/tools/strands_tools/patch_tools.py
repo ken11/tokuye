@@ -313,3 +313,77 @@ def _apply_patch_with_fallbacks(diff: str) -> str:
         final_error += "\n\nFile context at failed locations:\n" + "\n".join(hints)
 
     raise RuntimeError(final_error)
+
+
+# ---------------------------------------------------------------------------
+# Internal _for(root) helper — used by make_epic_worker_tools
+# ---------------------------------------------------------------------------
+
+def apply_patch_for(root: Path, diff: str) -> str:
+    """Apply a git diff patch to a specific repository root.
+
+    Identical to apply_patch but uses *root* instead of settings.project_root.
+
+    Args:
+        root: Absolute path to the target repository root.
+        diff: Diff string in Git format.
+
+    Returns:
+        Patch application result message.
+    """
+    try:
+        # Normalize line endings
+        diff_lf = diff.replace("\r\n", "\n")
+        if not diff_lf.endswith("\n"):
+            diff_lf += "\n"
+        diff_lf = _sanitize_patch(diff_lf)
+
+        tokuye_dir = root / ".tokuye"
+        tokuye_dir.mkdir(exist_ok=True)
+
+        patch_file = tokuye_dir / "ai_patch.diff"
+        patch_file.write_text(diff_lf, encoding="utf-8")
+
+        is_valid, error_msg = _validate_patch_format(diff_lf)
+        if not is_valid:
+            raise RuntimeError(f"Invalid patch format: {error_msg}")
+
+        repo = Repo(root)
+
+        apply_strategies = [
+            {"options": [], "description": "standard apply"},
+            {"options": ["--recount"], "description": "with line recount"},
+            {"options": ["--ignore-whitespace"], "description": "ignoring whitespace"},
+            {
+                "options": ["--recount", "--ignore-whitespace"],
+                "description": "with line recount and ignoring whitespace",
+            },
+        ]
+
+        errors: List[str] = []
+        for strategy in apply_strategies:
+            options = strategy["options"]
+            description = strategy["description"]
+            try:
+                if options:
+                    repo.git.apply(str(patch_file), *options)
+                else:
+                    repo.git.apply(str(patch_file))
+                return f"Patch applied successfully ({description})"
+            except Exception as e:
+                errors.append(f"git apply {' '.join(options)} failed: {str(e)}")
+
+        all_errors = "\n".join(errors)
+        final_error = f"All patch application strategies failed:\n{all_errors}"
+
+        hints = []
+        for file_path, hunk_line in _extract_failed_hunks(diff_lf):
+            hint = _build_context_hint(file_path, hunk_line)
+            if hint:
+                hints.append(hint)
+        if hints:
+            final_error += "\n\nFile context at failed locations:\n" + "\n".join(hints)
+
+        raise RuntimeError(final_error)
+    except Exception as e:
+        return f"Error applying patch: {str(e)}"

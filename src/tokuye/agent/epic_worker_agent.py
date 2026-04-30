@@ -11,14 +11,24 @@ Usage
     worker = EpicWorkerAgent(
         epic_id="auth-cognito-migration",
         task_id="T001",
+        repo_root=Path("/path/to/target/repo"),
     )
     result_yaml = worker(task_instruction)
+
+Tool sandboxing
+---------------
+All tools given to the Worker are sandboxed to *repo_root* via
+``make_epic_worker_tools(repo_root)``.  The Worker cannot read or write
+files outside that directory, and all git / GitHub CLI operations target
+that repository.  This is intentional: each Worker is responsible for
+exactly one repository.
 """
 
 from __future__ import annotations
 
 import logging
 import os
+from pathlib import Path
 
 from strands import Agent
 from strands.agent.conversation_manager import SummarizingConversationManager
@@ -26,7 +36,7 @@ from strands.models import BedrockModel
 from strands.session.file_session_manager import FileSessionManager
 
 from tokuye.prompts.prompt_loader import load_prompt, load_prompt_if_exists
-from tokuye.tools.strands_tools import all_tools
+from tokuye.tools.strands_tools.epic_tools.worker_tools import make_epic_worker_tools
 from tokuye.utils.config import settings
 
 logger = logging.getLogger(__name__)
@@ -49,15 +59,24 @@ class EpicWorkerAgent:
 
     Invoked as a Strands tool (run_epic_worker); no TUI callbacks needed.
     Returns a YAML string as the task result.
+
+    Args:
+        epic_id: Epic identifier (e.g. 'auth-cognito-migration').
+        task_id: Task identifier within the epic (e.g. 'T001').
+        repo_root: Absolute path to the target repository.  All tools are
+            sandboxed to this directory — the Worker cannot touch anything
+            outside it.
     """
 
     def __init__(
         self,
         epic_id: str,
         task_id: str,
+        repo_root: Path,
     ) -> None:
         self.epic_id = epic_id
         self.task_id = task_id
+        self.repo_root = repo_root.resolve()
 
         # System prompt (language-aware)
         if settings.language == "ja":
@@ -93,10 +112,18 @@ class EpicWorkerAgent:
             session_id=session_id, storage_dir=session_dir
         )
 
+        # Build sandboxed tool set — all operations restricted to repo_root
+        worker_tools = make_epic_worker_tools(self.repo_root)
+        logger.info(
+            "EpicWorkerAgent: sandboxed to %s (%d tools)",
+            self.repo_root,
+            len(worker_tools),
+        )
+
         # Build agent (no MCP for worker — keeps it lightweight)
         self.agent = Agent(
             model=self.model,
-            tools=all_tools,
+            tools=worker_tools,
             system_prompt=self.system_prompt,
             session_manager=self.session_manager,
             conversation_manager=SummarizingConversationManager(

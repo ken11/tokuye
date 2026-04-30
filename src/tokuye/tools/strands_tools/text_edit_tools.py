@@ -263,3 +263,116 @@ def insert_before_exact(file_path: str, anchor_text: str, new_text: str) -> str:
         f"insert_before_exact applied successfully to {file_path} "
         f"(inserted {len(new_text)} chars before anchor)"
     )
+
+
+# ---------------------------------------------------------------------------
+# Internal _for(root) helpers — used by make_epic_worker_tools
+# Accept an explicit root: Path instead of reading settings.project_root.
+# ---------------------------------------------------------------------------
+
+def _validate_path_for(root: Path, file_path: str) -> Path:
+    """Validate path is within root and not gitignored. Returns abs_path or raises."""
+    try:
+        abs_path = get_validated_relative_path(root, file_path)
+    except FileValidationError:
+        raise FileValidationError(
+            f"Access denied to file_path: {file_path}. "
+            "Permission granted exclusively to the current working directory"
+        )
+    if _is_ignored_by_git(root, abs_path):
+        raise FileValidationError(
+            f"Access denied to file_path: {file_path}. "
+            "File is matched by .gitignore patterns."
+        )
+    return abs_path
+
+
+def _read_validated_file_for(root: Path, file_path: str) -> tuple[Path, str]:
+    """Validate path and read file content (UTF-8). Returns (abs_path, content) or raises."""
+    abs_path = _validate_path_for(root, file_path)
+    if not abs_path.exists():
+        raise FileNotFoundError(f"file not found: {file_path}")
+    if abs_path.is_dir():
+        raise IsADirectoryError(f"{file_path} is a directory")
+    content = abs_path.read_text(encoding="utf-8")
+    return abs_path, content
+
+
+def replace_exact_for(root: Path, file_path: str, old_text: str, new_text: str) -> str:
+    try:
+        abs_path, content = _read_validated_file_for(root, file_path)
+    except FileValidationError as e:
+        return f"Error: {e}"
+    except (FileNotFoundError, IsADirectoryError) as e:
+        return f"Error: {e}"
+    except Exception as e:
+        return f"Error reading file: {e}"
+
+    idx, err = _locate_exact(content, old_text, "old_text")
+    if err:
+        return err
+
+    new_content = content[:idx] + new_text + content[idx + len(old_text):]
+    try:
+        abs_path.write_text(new_content, encoding="utf-8")
+    except Exception as e:
+        return f"Error writing file: {e}"
+
+    return (
+        f"replace_exact applied successfully to {file_path} "
+        f"(removed {len(old_text)} chars, inserted {len(new_text)} chars)"
+    )
+
+
+def insert_after_exact_for(root: Path, file_path: str, anchor_text: str, new_text: str) -> str:
+    try:
+        abs_path, content = _read_validated_file_for(root, file_path)
+    except FileValidationError as e:
+        return f"Error: {e}"
+    except (FileNotFoundError, IsADirectoryError) as e:
+        return f"Error: {e}"
+    except Exception as e:
+        return f"Error reading file: {e}"
+
+    idx, err = _locate_exact(content, anchor_text, "anchor_text")
+    if err:
+        return err
+
+    insert_pos = idx + len(anchor_text)
+    new_content = content[:insert_pos] + new_text + content[insert_pos:]
+    try:
+        abs_path.write_text(new_content, encoding="utf-8")
+    except Exception as e:
+        return f"Error writing file: {e}"
+
+    return (
+        f"insert_after_exact applied successfully to {file_path} "
+        f"(inserted {len(new_text)} chars after anchor)"
+    )
+
+
+def insert_before_exact_for(root: Path, file_path: str, anchor_text: str, new_text: str) -> str:
+    try:
+        abs_path, content = _read_validated_file_for(root, file_path)
+    except FileValidationError as e:
+        return f"Error: {e}"
+    except (FileNotFoundError, IsADirectoryError) as e:
+        return f"Error: {e}"
+    except Exception as e:
+        return f"Error reading file: {e}"
+
+    idx, err = _locate_exact(content, anchor_text, "anchor_text")
+    if err:
+        return err
+
+    new_content = content[:idx] + new_text + content[idx:]
+    try:
+        abs_path.write_text(new_content, encoding="utf-8")
+    except Exception as e:
+        return f"Error writing file: {e}"
+
+    return (
+        f"insert_before_exact applied successfully to {file_path} "
+        f"(inserted {len(new_text)} chars before anchor)"
+    )
+
