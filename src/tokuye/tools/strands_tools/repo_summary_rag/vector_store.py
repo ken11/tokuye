@@ -116,7 +116,7 @@ def _load_index(project_root_override: Optional[str] = None) -> bool:
         NEXT_ID = (max(CHUNK_BY_ID.keys()) + 1) if CHUNK_BY_ID else 0
 
         try:
-            with open(_timestamp_path(), "r", encoding="utf-8") as f:
+            with open(_timestamp_path(project_root_override), "r", encoding="utf-8") as f:
                 LAST_GENERATED_AT = f.read().strip()
         except Exception:
             LAST_GENERATED_AT = ""
