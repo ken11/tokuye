@@ -36,6 +36,7 @@ from strands.handlers.callback_handler import null_callback_handler
 from strands.models import BedrockModel
 from strands.session.file_session_manager import FileSessionManager
 
+from tokuye.agent.strands_agent import _build_skills_plugin
 from tokuye.prompts.prompt_loader import load_prompt, load_prompt_if_exists
 from tokuye.tools.strands_tools.epic_tools.worker_tools import make_epic_worker_tools
 from tokuye.utils.config import settings
@@ -136,6 +137,7 @@ class EpicWorkerAgent:
         )
 
         # Build agent (no MCP for worker — keeps it lightweight)
+        _skills_plugin = _build_skills_plugin()
         self.agent = Agent(
             model=self.model,
             tools=worker_tools,
@@ -145,6 +147,7 @@ class EpicWorkerAgent:
                 summarization_system_prompt=self.summary_prompt
             ),
             callback_handler=null_callback_handler,
+            **({"plugins": [_skills_plugin]} if _skills_plugin else {}),
         )
 
     def __call__(self, instruction: str) -> str:

@@ -40,6 +40,60 @@ EOF
 tokuye --project-root /path/to/your/project
 ```
 
+## Skills
+
+Tokuye uses a **Skills** system to keep the system prompt lean and reduce token usage.
+Skills are Markdown files (`SKILL.md`) that contain detailed instructions loaded on demand — only when the agent needs them.
+
+### Default skills
+
+Three skills are bundled with Tokuye:
+
+| Skill | Description |
+|---|---|
+| `workflow` | Step-by-step work process (investigation → plan → implement → finalize) |
+| `tool-usage` | Tool priority order and per-tool handling rules |
+| `response-format` | Required response structure for all replies |
+
+### Customising skills
+
+To customise skills for your project, copy the bundled defaults to a local directory:
+
+```bash
+tokuye init-skills .tokuye/skills
+```
+
+Then point `skills_dir` at that directory in your `.tokuye/config.yaml`:
+
+```yaml
+skills_dir: .tokuye/skills
+```
+
+Edit the `SKILL.md` files freely — add project-specific conventions, coding standards, deployment procedures, etc.
+You can also add entirely new skill directories (each needs a `SKILL.md` with YAML frontmatter).
+
+### Skill format
+
+```
+.tokuye/skills/
+  my-skill/
+    SKILL.md        ← YAML frontmatter + Markdown instructions
+```
+
+```markdown
+---
+name: my-skill
+description: One-line description of what this skill does and when to load it.
+---
+
+# My Skill
+
+Instructions go here...
+```
+
+The `description` field is injected into the system prompt so the agent knows when to activate the skill.
+Full instructions are only loaded when the agent calls the `skills` tool — keeping every-turn token cost low.
+
 ## Prerequisites
 
 - **AWS Bedrock Access**: IAM credentials with Bedrock permissions

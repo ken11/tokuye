@@ -62,6 +62,12 @@ class Settings(BaseSettings):
 
     strands_session_dir: str = ".tokuye/sessions"
 
+    # --- Skills ----------------------------------------------------------
+    # Path to a directory containing skill subdirectories (each with SKILL.md).
+    # If relative, resolved against project_root at runtime.
+    # If empty/None, skills are disabled.
+    skills_dir: Optional[str] = None
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
