@@ -27,7 +27,9 @@ from strands import Agent
 from strands.agent.conversation_manager import SummarizingConversationManager
 from strands.models import BedrockModel
 from strands.session.file_session_manager import FileSessionManager
+from strands.vended_plugins.skills import AgentSkills
 
+from tokuye.agent.strands_agent import _build_skills_plugin
 from tokuye.mcp_manager import MCPClientManager
 from tokuye.prompts.prompt_loader import load_prompt, load_prompt_if_exists
 from tokuye.tools.strands_tools.epic_tools import epic_manager_tools
@@ -134,6 +136,7 @@ class EpicManagerAgent:
 
         combined_tools = list(epic_manager_tools) + mcp_tools
 
+        _skills_plugin = _build_skills_plugin()
         self.agent = Agent(
             model=self.model,
             tools=combined_tools,
@@ -143,6 +146,7 @@ class EpicManagerAgent:
                 summarization_system_prompt=self.summary_prompt
             ),
             callback_handler=self._callback_handler,
+            **({"plugins": [_skills_plugin]} if _skills_plugin else {}),
         )
 
         self._mcp_initialized = True

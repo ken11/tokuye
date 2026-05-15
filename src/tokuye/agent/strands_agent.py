@@ -1,5 +1,6 @@
 import logging
 import os
+from pathlib import Path
 
 from git import Repo
 from strands import Agent
@@ -7,6 +8,7 @@ from strands.agent import AgentResult
 from strands.agent.conversation_manager import SummarizingConversationManager
 from strands.models import BedrockModel
 from strands.session.file_session_manager import FileSessionManager
+from strands.vended_plugins.skills import AgentSkills
 from tokuye.agent.node_agents import NodeAgents
 from tokuye.agent.state_machine import DevState, StateClassifier, StateMachine
 from tokuye.mcp_manager import MCPClientManager
@@ -37,6 +39,41 @@ def _supports_tool_cache(model_identifier: str) -> bool:
     ValidationException.  Only Claude models support cache_tools.
     """
     return model_identifier in ("sonnet-4-6", "haiku-4-5", "opus-4-6")
+
+
+def _build_skills_plugin() -> AgentSkills | None:
+    """Return an AgentSkills plugin if skills_dir is configured, else None.
+
+    Resolution order:
+    1. settings.skills_dir (absolute or relative to project_root)
+    2. Bundled default skills at <package>/skills/ (always available as fallback)
+    """
+    # Bundled default skills shipped with tokuye
+    _default_skills_dir = Path(__file__).parent.parent / "skills"
+
+    raw = settings.skills_dir
+    if raw:
+        candidate = Path(raw)
+        if not candidate.is_absolute():
+            candidate = Path(settings.project_root) / candidate
+        if candidate.exists():
+            skills_path = candidate
+            logger.info("AgentSkills: loading from configured skills_dir: %s", skills_path)
+        else:
+            logger.warning(
+                "AgentSkills: skills_dir '%s' does not exist; falling back to bundled skills",
+                candidate,
+            )
+            skills_path = _default_skills_dir
+    else:
+        skills_path = _default_skills_dir
+        logger.info("AgentSkills: skills_dir not set; using bundled default skills: %s", skills_path)
+
+    if not skills_path.exists():
+        logger.warning("AgentSkills: skills directory not found (%s); skills disabled", skills_path)
+        return None
+
+    return AgentSkills(skills=[str(skills_path)])
 
 
 class MaxStepsException(Exception):
@@ -144,6 +181,7 @@ class StrandsAgent:
         combined_tools = list(all_tools) + mcp_tools
 
         # --- Build Strands Agent (v1) ------------------------------------
+        _skills_plugin = _build_skills_plugin()
         self.agent = Agent(
             model=self.model,
             tools=combined_tools,
@@ -153,6 +191,7 @@ class StrandsAgent:
                 summarization_system_prompt=self.summary_prompt
             ),
             callback_handler=self._callback_handler,
+            **({"plugins": [_skills_plugin]} if _skills_plugin else {}),
         )
 
         # --- Build state machine + NodeAgents (v2) -----------------------
