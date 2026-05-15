@@ -65,7 +65,7 @@ class Settings(BaseSettings):
     # --- Skills ----------------------------------------------------------
     # Path to a directory containing skill subdirectories (each with SKILL.md).
     # If relative, resolved against project_root at runtime.
-    # If empty/None, skills are disabled.
+    # If empty/None, falls back to the bundled default skills shipped with tokuye.
     skills_dir: Optional[str] = None
 
     class Config:
@@ -158,6 +158,7 @@ def _apply_yaml_to_settings(
         "name",
         "system_prompt_markdown_path",
         "theme",
+        "skills_dir",
     ]
     for key in simple_keys:
         if key in yaml_config:
