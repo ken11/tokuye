@@ -15,6 +15,8 @@ Directory layout created by these tools:
         tasks.yaml       – task list with status
         progress.md      – running progress log
         decisions.md     – design decisions / notes
+        docs/
+          <filename>     – supplementary documents (user-instructed)
         results/
           <task_id>.yaml – per-task execution result
 """
@@ -54,6 +56,7 @@ def _ensure_epic_dir(epic_id: str) -> Path:
     d = _epic_dir(epic_id)
     d.mkdir(parents=True, exist_ok=True)
     (d / "results").mkdir(exist_ok=True)
+    (d / "docs").mkdir(exist_ok=True)
     return d
 
 
@@ -262,7 +265,7 @@ def save_epic_decisions(epic_id: str, decision: str) -> str:
     description=(
         "Read a file from the Epic working directory. "
         "Supported file names: epic.md, plan.md, tasks.yaml, progress.md, decisions.md, "
-        "or results/<task_id>.yaml."
+        "results/<task_id>.yaml, or docs/<filename> for supplementary documents."
     ),
 )
 def read_epic_file(epic_id: str, filename: str) -> str:
@@ -271,7 +274,8 @@ def read_epic_file(epic_id: str, filename: str) -> str:
     Args:
         epic_id: Epic identifier.
         filename: File name relative to the epic directory.
-                  Examples: 'plan.md', 'tasks.yaml', 'results/T001.yaml'
+                  Examples: 'plan.md', 'tasks.yaml', 'results/T001.yaml',
+                  'docs/api-spec.md'
 
     Returns:
         File contents as a string, or an error message if not found.
@@ -289,6 +293,78 @@ def read_epic_file(epic_id: str, filename: str) -> str:
         return f"File not found: {target}"
 
     return target.read_text(encoding="utf-8")
+
+
+# ---------------------------------------------------------------------------
+# Supplementary document tools (docs/ subdirectory)
+# ---------------------------------------------------------------------------
+
+
+@tool(
+    name="write_epic_doc",
+    description=(
+        "Write a supplementary document to the docs/ subdirectory of an Epic. "
+        "Creates or overwrites docs/<filename>. "
+        "Use this when the user asks to create reference material, specs, "
+        "meeting notes, or any auxiliary document for the Epic. "
+        "filename must be a simple name (e.g. 'api-spec.md'); "
+        "subdirectories inside docs/ are not allowed."
+    ),
+)
+def write_epic_doc(epic_id: str, filename: str, content: str) -> str:
+    """Write a supplementary document to docs/<filename>.
+
+    Args:
+        epic_id: Epic identifier.
+        filename: File name inside the docs/ directory (e.g. 'api-spec.md').
+                  Must not contain path separators.
+        content: Full document content (Markdown or plain text).
+
+    Returns:
+        Confirmation message with file path, or an error message.
+    """
+    if "/" in filename or "\\" in filename:
+        return (
+            f"Error: filename must not contain path separators. "
+            f"Got: '{filename}'. Use a simple name like 'api-spec.md'."
+        )
+
+    d = _ensure_epic_dir(epic_id)
+    docs_dir = d / "docs"
+    target = docs_dir / filename
+
+    target.write_text(content, encoding="utf-8")
+    logger.info("Wrote epic doc: %s", target)
+    return f"Document saved to: {target}"
+
+
+@tool(
+    name="list_epic_docs",
+    description=(
+        "List supplementary documents in the docs/ subdirectory of an Epic. "
+        "Returns the file names inside docs/, or a message if the directory is empty."
+    ),
+)
+def list_epic_docs(epic_id: str) -> str:
+    """List files in the docs/ subdirectory of an Epic.
+
+    Args:
+        epic_id: Epic identifier.
+
+    Returns:
+        Newline-separated list of file names, or an informational message.
+    """
+    d = _epic_dir(epic_id)
+    docs_dir = d / "docs"
+
+    if not docs_dir.exists():
+        return "docs/ directory does not exist yet. Use write_epic_doc to create documents."
+
+    entries = sorted(f.name for f in docs_dir.iterdir() if f.is_file())
+    if not entries:
+        return "docs/ directory is empty."
+    return "\n".join(entries)
+
 
 # ---------------------------------------------------------------------------
 # Epic management directory — scoped read-only tools for EpicManagerAgent

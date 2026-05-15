@@ -9,6 +9,7 @@ Exports:
 from tokuye.tools.strands_tools.epic_tools.epic_dir_tools import (
     create_epic_dir,
     list_directory_epic,
+    list_epic_docs,
     read_epic_file,
     read_lines_epic,
     save_epic_decisions,
@@ -16,6 +17,7 @@ from tokuye.tools.strands_tools.epic_tools.epic_dir_tools import (
     save_epic_tasks,
     save_task_result,
     update_epic_progress,
+    write_epic_doc,
 )
 from tokuye.tools.strands_tools.epic_tools.repo_ops import (
     manage_code_index_epic,
@@ -42,6 +44,8 @@ epic_manager_tools = [
     update_epic_progress,
     read_epic_file,
     save_epic_decisions,
+    write_epic_doc,
+    list_epic_docs,
     # Per-repo analysis (epic-safe versions)
     repo_summarize_epic,
     repo_description_epic,
