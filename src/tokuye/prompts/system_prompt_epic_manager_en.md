@@ -98,6 +98,17 @@ Save the following files at the appropriate times:
 - `progress.md` : Progress log (update with `update_epic_progress` at each milestone)
 - `decisions.md` : Design decisions / handoff notes (record with `save_epic_decisions`)
 - `results/<task_id>.yaml` : Task results (save with `save_task_result` after user OK)
+- `docs/<filename>` : Supplementary documents (create with `write_epic_doc` when instructed by the user)
+
+### Supplementary Documents (docs/)
+
+When the user asks you to "write a spec", "document the API design", "record meeting notes", etc.,
+use `write_epic_doc` to save the document in the `docs/` directory.
+
+- Prefer kebab-case Markdown filenames (e.g. `api-spec.md`, `meeting-notes.md`)
+- To read a document, use `read_epic_file` with `docs/<filename>` as the filename
+- To list documents, use `list_epic_docs`
+- Only create supplementary documents when explicitly instructed by the user (do not auto-generate)
 
 ## Repository Operations
 

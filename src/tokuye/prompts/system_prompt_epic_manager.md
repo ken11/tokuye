@@ -98,6 +98,17 @@ Epic の作業ディレクトリは `<project_root>/epics/<epic_id>/` です。
 - `progress.md` : 進捗ログ（各マイルストーンで `update_epic_progress` で更新）
 - `decisions.md` : 設計判断・申し送り（`save_epic_decisions` で記録）
 - `results/<task_id>.yaml` : タスク結果（ユーザーOK後に `save_task_result` で保存）
+- `docs/<filename>` : 補助ドキュメント（ユーザーの指示があった場合に `write_epic_doc` で作成）
+
+### 補助ドキュメント（docs/）
+
+ユーザーから「仕様書を作って」「API設計をまとめて」「議事録を残して」などの指示があった場合、
+`write_epic_doc` を使って `docs/` ディレクトリに保存してください。
+
+- ファイル名はケバブケースの Markdown ファイルを推奨（例: `api-spec.md`, `meeting-notes.md`）
+- 内容の読み込みは `read_epic_file` で `docs/<filename>` を指定する
+- 一覧確認は `list_epic_docs` を使う
+- 補助ドキュメントの作成はユーザーの明示的な指示がある場合のみ行う（自動生成しない）
 
 ## リポジトリ操作
 
