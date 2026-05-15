@@ -36,8 +36,6 @@ class Settings(BaseSettings):
 
     bedrock_model_id: str = "global.anthropic.claude-sonnet-4-6"
     model_identifier: str = ""
-    bedrock_plan_model_id: str = ""
-    plan_model_identifier: str = ""
     bedrock_embedding_model_id: str = "amazon.titan-embed-text-v2:0"
 
     bedrock_repo_description_model_id: str = ""  # repo-description生成用; 未指定時はbedrock_model_idにフォールバック
