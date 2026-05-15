@@ -65,10 +65,6 @@ class TokenUsageTracker:
 
     def set_cost_table(self):
         self.cost_table = MODEL_COST[settings.model_identifier]
-        if settings.plan_model_identifier and settings.plan_model_identifier in MODEL_COST:
-            self.plan_cost_table = MODEL_COST[settings.plan_model_identifier]
-        else:
-            self.plan_cost_table = None
         if settings.impl_model_identifier and settings.impl_model_identifier in MODEL_COST:
             self.impl_cost_table = MODEL_COST[settings.impl_model_identifier]
         else:
@@ -109,9 +105,6 @@ class TokenUsageTracker:
 
     def _resolve_cost_table(self, model_identifier: Optional[str]) -> Dict:
         """Return the cost table for the given model_identifier, falling back to the default."""
-        if model_identifier and self.plan_cost_table is not None:
-            if model_identifier == settings.plan_model_identifier:
-                return self.plan_cost_table
         if model_identifier and self.impl_cost_table is not None:
             if model_identifier == settings.impl_model_identifier:
                 return self.impl_cost_table

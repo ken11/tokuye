@@ -139,7 +139,6 @@ def _apply_yaml_to_settings(
         "language",
         "bedrock_model_id",
         "bedrock_embedding_model_id",
-        "bedrock_plan_model_id",
         "state_machine_mode",
         "epic_mode",
         "bedrock_epic_manager_model_id",
