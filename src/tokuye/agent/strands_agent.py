@@ -13,7 +13,6 @@ from tokuye.mcp_manager import MCPClientManager
 from tokuye.prompts.prompt_loader import (load_custom_system_prompt,
                                           load_prompt, load_prompt_if_exists)
 from tokuye.tools.strands_tools import all_tools
-from tokuye.tools.strands_tools.phase_tool import configure_phase_models
 from tokuye.utils.config import settings
 from tokuye.utils.token_tracker import token_tracker
 
@@ -94,35 +93,6 @@ class StrandsAgent:
             temperature=settings.model_temperature,
         )
 
-        # When bedrock_plan_model_id is configured, create a separate
-        # "thinking" model and wire up the phase-switching tool.
-        if settings.bedrock_plan_model_id:
-            _plan_cache = _supports_prompt_cache(settings.plan_model_identifier)
-            _plan_tool_cache = _supports_tool_cache(settings.plan_model_identifier)
-            thinking_model = BedrockModel(
-                **({"cache_prompt": "default"} if _plan_cache else {}),
-                **({"cache_tools": "default"} if _plan_tool_cache else {}),
-                model_id=settings.bedrock_plan_model_id,
-                temperature=settings.model_temperature,
-            )
-            configure_phase_models(
-                thinking=thinking_model,
-                executing=self.model,
-            )
-            # Start the agent on the thinking model (first turn is usually
-            # investigation / planning).
-            initial_model = thinking_model
-            logger.info(
-                "Phase-based model switching enabled: thinking=%s, executing=%s",
-                settings.bedrock_plan_model_id,
-                settings.bedrock_model_id,
-            )
-        else:
-            initial_model = self.model
-            logger.info(
-                "Phase-based model switching disabled (bedrock_plan_model_id not set)"
-            )
-
         self.session_dir = settings.strands_session_dir
         if not self.session_dir:
             self.session_dir = os.path.join(
@@ -134,7 +104,6 @@ class StrandsAgent:
         )
 
         # Save for deferred use in _init_mcp_and_build_agent
-        self.initial_model = initial_model
         self._thread_id = thread_id
 
         # MCP manager — actual start/get_tools is deferred to _init_mcp_and_build_agent()
@@ -176,7 +145,7 @@ class StrandsAgent:
 
         # --- Build Strands Agent (v1) ------------------------------------
         self.agent = Agent(
-            model=self.initial_model,
+            model=self.model,
             tools=combined_tools,
             system_prompt=self.system_prompt,
             session_manager=self.session_manager,
