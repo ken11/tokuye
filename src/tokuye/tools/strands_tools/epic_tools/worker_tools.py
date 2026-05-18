@@ -66,6 +66,9 @@ from tokuye.tools.strands_tools.text_edit_tools import (
     insert_before_exact_for,
     replace_exact_for,
 )
+from tokuye.tools.strands_tools.project_command_tools import (
+    make_project_command_tools_for,
+)
 from tokuye.utils.config import settings
 
 logger = logging.getLogger(__name__)
@@ -801,4 +804,6 @@ def make_epic_worker_tools(repo_root: Path) -> list:
         _issue_get_comments,
         _submit_issue,
         _issue_add_comment,
+        # Project commands (cwd bound to repo_root)
+        *make_project_command_tools_for(repo_root),
     ]

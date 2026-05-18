@@ -11,9 +11,6 @@ from tokuye.tui.base_interface import ChatInterface
 from tokuye.utils.config import load_yaml_config, settings, validate_settings, _resolve_source_model_id
 from tokuye.utils.token_tracker import token_tracker
 
-os.environ["BYPASS_TOOL_CONSENT"] = "true"
-os.environ["EDITOR_DISABLE_BACKUP"] = "true"
-
 
 def signal_handler(sig, frame):
     print("\nExiting application...")
