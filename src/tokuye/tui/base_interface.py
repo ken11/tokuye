@@ -285,7 +285,7 @@ class ChatInterface(App):
             approved = message.strip().lower().startswith("y")
             resolve_command_approval(approved)
             if not approved:
-                self.add_system_message("コマンド実行をキャンセルしました。")
+                self.add_system_message("Command execution was cancelled.")
             return
 
         if token_tracker:

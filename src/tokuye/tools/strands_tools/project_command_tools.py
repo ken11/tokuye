@@ -366,11 +366,11 @@ async def _request_approval(argv: List[str], cwd: Path) -> bool:
 
     cmd_str = " ".join(argv)
     prompt = (
-        "実行予定のコマンド:\n"
+        "Planned command:\n"
         f"{cmd_str}\n\n"
-        "作業ディレクトリ:\n"
+        "Working directory:\n"
         f"{cwd}\n\n"
-        "実行しますか？ y/n"
+        "Execute? y/n"
     )
 
     if _add_system_message is None or _set_thinking is None:
@@ -459,12 +459,12 @@ def _report_result(argv: List[str], result: dict) -> None:
     exit_code = result.get("exit_code", "N/A")
 
     lines = [
-        "実行したコマンド:",
+        "Command executed:",
         cmd_str,
         "",
-        f"終了コード: {exit_code}",
+        f"Exit code: {exit_code}",
         "",
-        f"結果: {status}",
+        f"Status: {status}",
     ]
 
     if status in ("error", "timeout"):
@@ -472,7 +472,7 @@ def _report_result(argv: List[str], result: dict) -> None:
         if stderr:
             # Show up to 500 chars of stderr in the TUI message.
             stderr_preview = stderr[:500] + ("..." if len(stderr) > 500 else "")
-            lines += ["", "stderr:", stderr_preview]
+            lines += ["", "Stderr:", stderr_preview]
 
     _add_system_message("\n".join(lines))
 
