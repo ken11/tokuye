@@ -361,8 +361,19 @@ async def _request_approval(argv: List[str], cwd: Path) -> bool:
     """Display approval prompt in TUI and await user response.
 
     Returns True if the user approved, False otherwise.
+
+    Guards against concurrent calls: if another approval is already in
+    progress (``_approval_event`` exists and has not been set yet), this
+    call rejects immediately rather than overwriting the shared state.
     """
     global _approval_event, _approval_result
+
+    # Guard: reject immediately if a concurrent approval is already pending.
+    if _approval_event is not None and not _approval_event.is_set():
+        logger.warning(
+            "run_project_command: concurrent approval request detected; rejecting."
+        )
+        return False
 
     cmd_str = " ".join(argv)
     prompt = (
@@ -388,15 +399,17 @@ async def _request_approval(argv: List[str], cwd: Path) -> bool:
     _add_system_message(prompt)
     _set_thinking(False)
 
-    # Yield control to the event loop until resolve_command_approval() fires.
-    await _approval_event.wait()
+    try:
+        # Yield control to the event loop until resolve_command_approval() fires.
+        await _approval_event.wait()
+    finally:
+        # Always restore thinking state and clear the event, even if the
+        # coroutine is cancelled (e.g. CancelledError) or another exception
+        # is raised.
+        _set_thinking(True)
+        _approval_event = None
 
-    # Re-disable input (thinking resumes).
-    _set_thinking(True)
-
-    approved = _approval_result
-    _approval_event = None
-    return approved
+    return _approval_result
 
 
 async def _run_subprocess(
