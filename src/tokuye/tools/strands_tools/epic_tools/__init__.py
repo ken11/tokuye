@@ -32,7 +32,6 @@ from tokuye.tools.strands_tools.issue_tools import (
     issue_view,
 )
 from tokuye.tools.strands_tools.epic_tools.worker_tool import run_epic_worker
-from tokuye.tools.strands_tools.phase_tool import report_phase
 from tokuye.tools.strands_tools.epic_tools.worker_tools import make_epic_worker_tools
 
 epic_manager_tools = [
