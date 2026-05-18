@@ -23,8 +23,6 @@ added to each standard tool module:
 Repo-analysis tools (repo_summarize, manage_code_index, search_code_repository,
 generate_repo_description) already have ``_for(root)`` variants used by
 EpicManagerAgent's repo_ops.py; the same helpers are reused here.
-
-phase_tool (report_phase) is stateless and is included as-is.
 """
 
 from __future__ import annotations
@@ -53,7 +51,6 @@ from tokuye.tools.strands_tools.git_tools import (
 )
 from tokuye.tools.strands_tools.gh_utils import run_gh_for
 from tokuye.tools.strands_tools.patch_tools import apply_patch_for
-from tokuye.tools.strands_tools.phase_tool import report_phase
 from tokuye.tools.strands_tools.repo_description import (
     generate_repo_description_with_detail_control,
 )
