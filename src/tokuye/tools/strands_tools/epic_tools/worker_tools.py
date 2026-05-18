@@ -30,7 +30,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 from strands import tool
 
@@ -67,7 +67,8 @@ from tokuye.tools.strands_tools.text_edit_tools import (
     replace_exact_for,
 )
 from tokuye.tools.strands_tools.project_command_tools import (
-    make_project_command_tools_for,
+    _run_project_command_impl,
+    list_project_commands,
 )
 from tokuye.utils.config import settings
 
@@ -763,6 +764,25 @@ def make_epic_worker_tools(repo_root: Path) -> list:
             return f"Error adding comment to Issue #{issue_number}: {e}"
 
     # ------------------------------------------------------------------
+    # Project command tools (cwd bound to repo_root)
+    # ------------------------------------------------------------------
+
+    @tool(
+        name="run_project_command",
+        description=(
+            "Execute a project command defined in config.yaml after user approval. "
+            "The command must be listed in ``command_policy.commands`` in config.yaml. "
+            "Use ``list_project_commands`` first to see what is available. "
+            "The command is run in the worker's repository root directory."
+        ),
+    )
+    async def _run_project_command(
+        name: str,
+        extra_args: Optional[List[str]] = None,
+    ) -> dict:
+        return await _run_project_command_impl(name, extra_args or [], repo_root)
+
+    # ------------------------------------------------------------------
     # Assemble and return
     # ------------------------------------------------------------------
 
@@ -805,5 +825,6 @@ def make_epic_worker_tools(repo_root: Path) -> list:
         _submit_issue,
         _issue_add_comment,
         # Project commands (cwd bound to repo_root)
-        *make_project_command_tools_for(repo_root),
+        list_project_commands,
+        _run_project_command,
     ]

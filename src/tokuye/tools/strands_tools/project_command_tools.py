@@ -3,7 +3,8 @@ project_command_tools.py
 ~~~~~~~~~~~~~~~~~~~~~~~~
 Tokuye-specific tools for running project commands defined in config.yaml.
 
-Two tools are provided:
+Public API
+----------
 
   list_project_commands()
       Returns the list of allowed commands so the Agent can discover what is
@@ -12,7 +13,12 @@ Two tools are provided:
   run_project_command(name, extra_args)
       Executes a named command after obtaining explicit user approval via the
       TUI.  The command is always run with ``subprocess.run(..., shell=False)``
-      in the project root directory.
+      in the project root directory (``settings.project_root``).
+
+  _run_project_command_impl(name, extra_args, repo_root)
+      Core implementation shared by ``run_project_command`` and the Epic Worker
+      factory in ``epic_tools/worker_tools.py``.  Accepts an explicit
+      ``repo_root`` so callers can sandbox execution to any directory.
 
 Approval flow
 -------------
@@ -29,8 +35,8 @@ The TUI must:
 
 Root execution guard
 --------------------
-If the process is running as root (UID 0), ``run_project_command`` refuses to
-execute any command.
+If the process is running as root (UID 0), ``_run_project_command_impl``
+refuses to execute any command.
 """
 
 from __future__ import annotations
@@ -165,6 +171,80 @@ def list_project_commands() -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Internal implementation: _run_project_command_impl
+# ---------------------------------------------------------------------------
+
+async def _run_project_command_impl(
+    name: str,
+    extra_args: List[str],
+    repo_root: Path,
+) -> dict:
+    """Core implementation of run_project_command, bound to *repo_root*.
+
+    Shared by the standard ``run_project_command`` tool (which passes
+    ``settings.project_root``) and the Epic Worker factory in
+    ``epic_tools/worker_tools.py`` (which passes the sandboxed repo root).
+
+    Args:
+        name: Command name as defined in config.yaml.
+        extra_args: Additional arguments appended after fixed_args.
+        repo_root: Working directory for subprocess execution.
+
+    Returns:
+        A dict with keys: status, command, cwd, exit_code, stdout, stderr.
+        status is one of: "success", "error", "cancelled", "timeout".
+    """
+    # Refuse root execution
+    if os.getuid() == 0:
+        return {
+            "status": "error",
+            "message": "Refusing to run project commands as root.",
+        }
+
+    policy = _get_policy()
+    cmd_entry = policy.find(name)
+
+    if cmd_entry is None:
+        available = [c.name for c in policy.commands]
+        return {
+            "status": "error",
+            "message": (
+                f"Unknown command name: {name!r}. "
+                f"Available commands: {available}. "
+                "Use list_project_commands to see the full list."
+            ),
+        }
+
+    if extra_args and not cmd_entry.allow_extra_args:
+        return {
+            "status": "error",
+            "message": (
+                f"Command {name!r} does not allow extra_args, "
+                f"but received: {extra_args!r}"
+            ),
+        }
+
+    argv = [cmd_entry.command, *cmd_entry.fixed_args, *extra_args]
+    effective_timeout = (
+        cmd_entry.timeout if cmd_entry.timeout is not None else policy.default_timeout
+    )
+    cwd = repo_root.resolve()
+
+    # --- Approval flow ---------------------------------------------------
+    approved = await _request_approval(argv, cwd)
+    if not approved:
+        return {
+            "status": "cancelled",
+            "message": "Command execution was rejected by the user.",
+        }
+
+    # --- Execute ---------------------------------------------------------
+    result = await _run_subprocess(argv, cwd, effective_timeout, policy.max_output_chars)
+    _report_result(argv, result)
+    return result
+
+
+# ---------------------------------------------------------------------------
 # Tool: run_project_command
 # ---------------------------------------------------------------------------
 
@@ -194,163 +274,12 @@ async def run_project_command(
         A dict with keys: status, command, cwd, exit_code, stdout, stderr.
         status is one of: "success", "error", "cancelled", "timeout".
     """
-    # Refuse root execution
-    if os.getuid() == 0:
-        return {
-            "status": "error",
-            "message": "Refusing to run project commands as root.",
-        }
-
-    if extra_args is None:
-        extra_args = []
-
-    policy = _get_policy()
-    cmd_entry = policy.find(name)
-
-    if cmd_entry is None:
-        available = [c.name for c in policy.commands]
-        return {
-            "status": "error",
-            "message": (
-                f"Unknown command name: {name!r}. "
-                f"Available commands: {available}. "
-                "Use list_project_commands to see the full list."
-            ),
-        }
-
-    if extra_args and not cmd_entry.allow_extra_args:
-        return {
-            "status": "error",
-            "message": (
-                f"Command {name!r} does not allow extra_args, "
-                f"but received: {extra_args!r}"
-            ),
-        }
-
-    argv = [cmd_entry.command, *cmd_entry.fixed_args, *extra_args]
-    effective_timeout = (
-        cmd_entry.timeout if cmd_entry.timeout is not None else policy.default_timeout
-    )
-
     try:
         cwd = _resolve_cwd()
     except ValueError as e:
         return {"status": "error", "message": str(e)}
 
-    # --- Approval flow ---------------------------------------------------
-    approved = await _request_approval(argv, cwd)
-    if not approved:
-        return {
-            "status": "cancelled",
-            "message": "Command execution was rejected by the user.",
-        }
-
-    # --- Execute ---------------------------------------------------------
-    result = await _run_subprocess(argv, cwd, effective_timeout, policy.max_output_chars)
-    _report_result(argv, result)
-    return result
-
-
-# ---------------------------------------------------------------------------
-# Epic Worker factory: cwd-bound variants
-# ---------------------------------------------------------------------------
-
-def make_project_command_tools_for(repo_root: Path) -> list:
-    """Return run_project_command / list_project_commands bound to *repo_root*.
-
-    Used by make_epic_worker_tools to give Epic Workers a sandboxed cwd.
-    The returned tools have the same names as the standard tools so the
-    Worker's system prompt needs no changes.
-    """
-    from strands import tool as _tool
-
-    repo_root = repo_root.resolve()
-
-    @_tool(
-        name="list_project_commands",
-        description=(
-            "List all project commands available for execution. "
-            "Returns the commands defined in config.yaml command_policy.commands."
-        ),
-    )
-    def _list_project_commands() -> dict:
-        policy = _get_policy()
-        result = []
-        for cmd in policy.commands:
-            effective_timeout = cmd.timeout if cmd.timeout is not None else policy.default_timeout
-            result.append({
-                "name": cmd.name,
-                "description": cmd.description,
-                "resolved_prefix": [cmd.command, *cmd.fixed_args],
-                "allow_extra_args": cmd.allow_extra_args,
-                "timeout": effective_timeout,
-                "usage": {
-                    "name": cmd.name,
-                    "extra_args": ["<arg1>", "<arg2>"] if cmd.allow_extra_args else [],
-                },
-            })
-        return {"commands": result}
-
-    @_tool(
-        name="run_project_command",
-        description=(
-            "Execute a project command defined in config.yaml after user approval. "
-            "The command is run in the worker's repository root directory."
-        ),
-    )
-    async def _run_project_command(
-        name: str,
-        extra_args: Optional[List[str]] = None,
-    ) -> dict:
-        if os.getuid() == 0:
-            return {
-                "status": "error",
-                "message": "Refusing to run project commands as root.",
-            }
-
-        if extra_args is None:
-            extra_args = []
-
-        policy = _get_policy()
-        cmd_entry = policy.find(name)
-
-        if cmd_entry is None:
-            available = [c.name for c in policy.commands]
-            return {
-                "status": "error",
-                "message": (
-                    f"Unknown command name: {name!r}. "
-                    f"Available commands: {available}."
-                ),
-            }
-
-        if extra_args and not cmd_entry.allow_extra_args:
-            return {
-                "status": "error",
-                "message": (
-                    f"Command {name!r} does not allow extra_args, "
-                    f"but received: {extra_args!r}"
-                ),
-            }
-
-        argv = [cmd_entry.command, *cmd_entry.fixed_args, *extra_args]
-        effective_timeout = (
-            cmd_entry.timeout if cmd_entry.timeout is not None else policy.default_timeout
-        )
-        cwd = repo_root
-
-        approved = await _request_approval(argv, cwd)
-        if not approved:
-            return {
-                "status": "cancelled",
-                "message": "Command execution was rejected by the user.",
-            }
-
-        result = await _run_subprocess(argv, cwd, effective_timeout, policy.max_output_chars)
-        _report_result(argv, result)
-        return result
-
-    return [_list_project_commands, _run_project_command]
+    return await _run_project_command_impl(name, extra_args or [], cwd)
 
 
 # ---------------------------------------------------------------------------
