@@ -26,6 +26,10 @@ from tokuye.tools.strands_tools.repo_summary_rag.code_search_tool import \
 from tokuye.tools.strands_tools.text_edit_tools import (insert_after_exact,
                                                         insert_before_exact,
                                                         replace_exact)
+from tokuye.tools.strands_tools.project_command_tools import (
+    list_project_commands,
+    run_project_command,
+)
 
 # from strands_tools import editor, file_read, file_write
 
@@ -62,6 +66,8 @@ all_tools = [
     issue_get_comments,
     submit_issue,
     issue_add_comment,
+    list_project_commands,
+    run_project_command,
 ]
 
 # ---------------------------------------------------------------------------

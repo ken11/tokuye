@@ -16,6 +16,11 @@ from tokuye.tui.utils import (StdoutRedirector, TextualLogHandler,
 from tokuye.tui.widgets import MessageInput, UnifiedSidePanelDisplay
 from tokuye.utils.config import settings
 from tokuye.utils.token_tracker import token_tracker
+from tokuye.tools.strands_tools.project_command_tools import (
+    is_waiting_for_command_approval,
+    resolve_command_approval,
+    set_command_approval_callbacks,
+)
 
 from textual import on, work
 from textual.app import App, ComposeResult
@@ -95,7 +100,15 @@ class ChatInterface(App):
 
         self.waiting_for_resume: bool = False
         self.waiting_for_recursion: bool = False
+        self.waiting_for_command_approval: bool = False
         self.continuous_task_branch: str = ""
+
+        # Register approval callbacks for run_project_command.
+        # call_later ensures TUI DOM updates happen on the main thread.
+        set_command_approval_callbacks(
+            add_system_message=lambda msg: self.call_later(self.add_system_message, msg),
+            set_thinking=lambda flg: self.call_later(self.set_thinking, flg),
+        )
 
     def compose(self) -> ComposeResult:
         yield Header(name=self.title, show_clock=True)
@@ -267,6 +280,13 @@ class ChatInterface(App):
                 self.add_system_message("Process interrupted")
                 self.waiting_for_recursion = False
                 return
+
+        if is_waiting_for_command_approval():
+            approved = message.strip().lower().startswith("y")
+            resolve_command_approval(approved)
+            if not approved:
+                self.add_system_message("コマンド実行をキャンセルしました。")
+            return
 
         if token_tracker:
             token_tracker.reset_turn()

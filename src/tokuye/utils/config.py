@@ -2,6 +2,7 @@ import logging
 import os
 import re
 import boto3
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -10,6 +11,38 @@ from pydantic_settings import BaseSettings
 
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Command policy models
+# ---------------------------------------------------------------------------
+
+@dataclass
+class CommandEntry:
+    """A single allowed command definition from config.yaml command_policy."""
+
+    name: str
+    description: str
+    command: str
+    fixed_args: List[str] = field(default_factory=list)
+    allow_extra_args: bool = True
+    timeout: Optional[int] = None  # None → fall back to CommandPolicy.default_timeout
+
+
+@dataclass
+class CommandPolicy:
+    """Parsed representation of config.yaml ``command_policy`` section."""
+
+    default_timeout: int = 300
+    max_output_chars: int = 20000
+    commands: List[CommandEntry] = field(default_factory=list)
+
+    def find(self, name: str) -> Optional[CommandEntry]:
+        """Return the CommandEntry with the given name, or None."""
+        for cmd in self.commands:
+            if cmd.name == name:
+                return cmd
+        return None
 
 
 class Settings(BaseSettings):
@@ -67,6 +100,11 @@ class Settings(BaseSettings):
     # If relative, resolved against project_root at runtime.
     # If empty/None, falls back to the bundled default skills shipped with tokuye.
     skills_dir: Optional[str] = None
+
+    # --- Command policy --------------------------------------------------
+    # Populated by load_yaml_config from the ``command_policy`` section.
+    # Not a pydantic field (dataclass); stored as a plain attribute after init.
+    command_policy: Optional[object] = None  # type: Optional[CommandPolicy]
 
     class Config:
         env_file = ".env"
@@ -177,6 +215,35 @@ def _apply_yaml_to_settings(
             settings_instance.mcp_servers = list(merged.values())
         else:
             settings_instance.mcp_servers = new_servers
+
+    if "command_policy" in yaml_config:
+        settings_instance.command_policy = _parse_command_policy(yaml_config["command_policy"])
+
+
+def _parse_command_policy(raw: dict) -> "CommandPolicy":
+    """Parse the ``command_policy`` section of config.yaml into a CommandPolicy."""
+    default_timeout = int(raw.get("default_timeout", 300))
+    max_output_chars = int(raw.get("max_output_chars", 20000))
+
+    commands: List[CommandEntry] = []
+    for entry in raw.get("commands", []):
+        try:
+            commands.append(CommandEntry(
+                name=entry["name"],
+                description=entry.get("description", ""),
+                command=entry["command"],
+                fixed_args=list(entry.get("fixed_args", [])),
+                allow_extra_args=bool(entry.get("allow_extra_args", True)),
+                timeout=int(entry["timeout"]) if "timeout" in entry else None,
+            ))
+        except Exception as e:
+            logger.warning("Invalid command_policy entry %r: %s", entry, e)
+
+    return CommandPolicy(
+        default_timeout=default_timeout,
+        max_output_chars=max_output_chars,
+        commands=commands,
+    )
 
 
 def load_yaml_config(settings_instance: Settings) -> Settings:  # noqa: C901
