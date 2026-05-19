@@ -76,6 +76,69 @@ def _build_skills_plugin() -> AgentSkills | None:
     return AgentSkills(skills=[str(skills_path)])
 
 
+def _build_skills_plugin_for_repo(repo_root: Path) -> AgentSkills | None:
+    """Return an AgentSkills plugin resolved from *repo_root*'s own config.
+
+    Resolution order:
+    1. skills_dir in ``<repo_root>/.tokuye/config.yaml`` (absolute or relative
+       to *repo_root*)
+    2. Bundled default skills at <package>/skills/ (always available as
+       fallback)
+
+    This is used by EpicWorkerAgent so that each target repository can declare
+    its own skills independently of the Epic management directory's config.
+    """
+    import yaml as _yaml
+
+    _default_skills_dir = Path(__file__).parent.parent / "skills"
+
+    # Try to read skills_dir from the repo's own .tokuye/config.yaml
+    repo_config_path = repo_root / ".tokuye" / "config.yaml"
+    raw: str | None = None
+    if repo_config_path.exists():
+        try:
+            with open(repo_config_path, "r", encoding="utf-8") as f:
+                repo_cfg = _yaml.safe_load(f)
+            if isinstance(repo_cfg, dict):
+                raw = repo_cfg.get("skills_dir")
+        except Exception as e:
+            logger.warning(
+                "AgentSkills(repo): failed to read %s: %s", repo_config_path, e
+            )
+
+    if raw:
+        candidate = Path(raw)
+        if not candidate.is_absolute():
+            candidate = repo_root / candidate
+        if candidate.exists():
+            skills_path = candidate
+            logger.info(
+                "AgentSkills(repo): loading from repo skills_dir: %s", skills_path
+            )
+        else:
+            logger.warning(
+                "AgentSkills(repo): skills_dir '%s' does not exist; falling back to bundled skills",
+                candidate,
+            )
+            skills_path = _default_skills_dir
+    else:
+        skills_path = _default_skills_dir
+        logger.info(
+            "AgentSkills(repo): skills_dir not set in %s; using bundled default skills: %s",
+            repo_config_path,
+            skills_path,
+        )
+
+    if not skills_path.exists():
+        logger.warning(
+            "AgentSkills(repo): skills directory not found (%s); skills disabled",
+            skills_path,
+        )
+        return None
+
+    return AgentSkills(skills=[str(skills_path)])
+
+
 class MaxStepsException(Exception):
 
     def __init__(self, message: str):

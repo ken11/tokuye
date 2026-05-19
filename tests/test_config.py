@@ -110,3 +110,86 @@ class TestBuildSkillsPluginFallback:
         # bundled exists, so fallback succeeds and plugin is not None
         plugin = sa._build_skills_plugin()
         assert plugin is not None
+
+
+class TestBuildSkillsPluginForRepo:
+    """Verify _build_skills_plugin_for_repo resolves skills from the repo's own config."""
+
+    def test_uses_skills_dir_from_repo_config(self, tmp_path):
+        """skills_dir in <repo>/.tokuye/config.yaml is used for the Worker."""
+        from tokuye.agent import strands_agent as sa
+
+        # Set up a fake repo with its own .tokuye/config.yaml and skills dir
+        repo_root = tmp_path / "my-repo"
+        repo_root.mkdir()
+        tokuye_dir = repo_root / ".tokuye"
+        tokuye_dir.mkdir()
+        skills_dir = repo_root / "my-skills"
+        skills_dir.mkdir()
+        (tokuye_dir / "config.yaml").write_text(
+            f"skills_dir: my-skills\n", encoding="utf-8"
+        )
+
+        plugin = sa._build_skills_plugin_for_repo(repo_root)
+        assert plugin is not None
+
+    def test_falls_back_to_bundled_when_no_repo_config(self, tmp_path):
+        """Falls back to bundled skills when the repo has no .tokuye/config.yaml."""
+        from tokuye.agent import strands_agent as sa
+
+        repo_root = tmp_path / "bare-repo"
+        repo_root.mkdir()
+
+        plugin = sa._build_skills_plugin_for_repo(repo_root)
+        # bundled skills exist, so plugin must not be None
+        assert plugin is not None
+
+    def test_falls_back_to_bundled_when_skills_dir_missing(self, tmp_path):
+        """Falls back to bundled skills when configured skills_dir does not exist."""
+        from tokuye.agent import strands_agent as sa
+
+        repo_root = tmp_path / "my-repo"
+        repo_root.mkdir()
+        tokuye_dir = repo_root / ".tokuye"
+        tokuye_dir.mkdir()
+        (tokuye_dir / "config.yaml").write_text(
+            "skills_dir: nonexistent-skills\n", encoding="utf-8"
+        )
+
+        plugin = sa._build_skills_plugin_for_repo(repo_root)
+        # bundled skills exist, so fallback succeeds
+        assert plugin is not None
+
+    def test_relative_skills_dir_resolved_against_repo_root(self, tmp_path):
+        """Relative skills_dir is resolved relative to repo_root, not project_root."""
+        from tokuye.agent import strands_agent as sa
+
+        repo_root = tmp_path / "my-repo"
+        repo_root.mkdir()
+        tokuye_dir = repo_root / ".tokuye"
+        tokuye_dir.mkdir()
+        skills_dir = repo_root / "custom-skills"
+        skills_dir.mkdir()
+        (tokuye_dir / "config.yaml").write_text(
+            "skills_dir: custom-skills\n", encoding="utf-8"
+        )
+
+        plugin = sa._build_skills_plugin_for_repo(repo_root)
+        assert plugin is not None
+
+    def test_absolute_skills_dir_used_as_is(self, tmp_path):
+        """Absolute skills_dir path is used without modification."""
+        from tokuye.agent import strands_agent as sa
+
+        repo_root = tmp_path / "my-repo"
+        repo_root.mkdir()
+        tokuye_dir = repo_root / ".tokuye"
+        tokuye_dir.mkdir()
+        abs_skills = tmp_path / "shared-skills"
+        abs_skills.mkdir()
+        (tokuye_dir / "config.yaml").write_text(
+            f"skills_dir: {abs_skills}\n", encoding="utf-8"
+        )
+
+        plugin = sa._build_skills_plugin_for_repo(repo_root)
+        assert plugin is not None

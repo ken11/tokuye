@@ -36,7 +36,7 @@ from strands.handlers.callback_handler import null_callback_handler
 from strands.models import BedrockModel
 from strands.session.file_session_manager import FileSessionManager
 
-from tokuye.agent.strands_agent import _build_skills_plugin
+from tokuye.agent.strands_agent import _build_skills_plugin_for_repo
 from tokuye.prompts.prompt_loader import load_prompt, load_prompt_if_exists
 from tokuye.tools.strands_tools.epic_tools.worker_tools import make_epic_worker_tools
 from tokuye.utils.config import settings
@@ -137,7 +137,10 @@ class EpicWorkerAgent:
         )
 
         # Build agent (no MCP for worker — keeps it lightweight)
-        _skills_plugin = _build_skills_plugin()
+        # Skills are resolved from the target repo's own .tokuye/config.yaml
+        # so each repo can declare its own skills independently of the Epic
+        # management directory.
+        _skills_plugin = _build_skills_plugin_for_repo(self.repo_root)
         self.agent = Agent(
             model=self.model,
             tools=worker_tools,
