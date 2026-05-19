@@ -7,7 +7,8 @@ from tokuye.tools.strands_tools.repo_summary_rag.data_loader import \
     parse_repository
 from tokuye.tools.strands_tools.repo_summary_rag.embedder import get_embedding
 from tokuye.tools.strands_tools.repo_summary_rag.vector_store import (
-    build_index, load_index_if_fresh, search, try_load, update_index_diff)
+    _INDEX_LOCK, build_index, load_index_if_fresh, search, try_load,
+    update_index_diff)
 
 
 def search_code_for(project_root: Path, query: str, top_k: int = 3) -> str:
@@ -28,14 +29,15 @@ def search_code_for(project_root: Path, query: str, top_k: int = 3) -> str:
     xml_path = str(project_root / ".tokuye" / "repo-summary.xml")
 
     chunks, generated_at = parse_repository(xml_path=xml_path)
-    if not load_index_if_fresh(generated_at or "", project_root_override=override):
-        if not try_load(project_root_override=override):
-            build_index(chunks, generated_at or "", project_root_override=override)
-        else:
-            update_index_diff(chunks, generated_at or "", project_root_override=override)
+    with _INDEX_LOCK:
+        if not load_index_if_fresh(generated_at or "", project_root_override=override):
+            if not try_load(project_root_override=override):
+                build_index(chunks, generated_at or "", project_root_override=override)
+            else:
+                update_index_diff(chunks, generated_at or "", project_root_override=override)
 
-    qvec = get_embedding(query)
-    results = search(qvec, top_k)
+        qvec = get_embedding(query)
+        results = search(qvec, top_k)
 
     if not results:
         return "No matching code found."

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import threading
 import time
 from typing import Dict, List, Optional
 
@@ -13,6 +14,13 @@ from tokuye.utils.config import settings
 from . import embedder
 
 logger = logging.getLogger(__name__)
+
+# Global lock to serialize all FAISS index operations.
+# The index state (INDEX, CHUNK_BY_ID, etc.) is module-level and shared across
+# threads.  Concurrent load/search/update calls from parallel tool executions
+# (e.g. EpicManagerAgent running multiple search_code_epic calls at once) would
+# corrupt results without this lock.
+_INDEX_LOCK = threading.Lock()
 
 INDEX: Optional[faiss.IndexIDMap2] = None
 CHUNK_BY_ID: Dict[int, Dict] = {}

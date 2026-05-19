@@ -9,7 +9,8 @@ from strands import tool
 from tokuye.tools.strands_tools.repo_summary_rag.data_loader import \
     parse_repository
 from tokuye.tools.strands_tools.repo_summary_rag.vector_store import (
-    build_index, load_index_if_fresh, status, try_load, update_index_diff)
+    _INDEX_LOCK, build_index, load_index_if_fresh, status, try_load,
+    update_index_diff)
 
 logger = logging.getLogger(__name__)
 
@@ -41,64 +42,65 @@ def manage_code_index_for(project_root: Path, action: str = "update") -> str:
             generated_at,
         )
 
-        if action == "build":
-            if load_index_if_fresh(generated_at or "", project_root_override=override):
-                st = status()
-                msg = (
-                    "✅ Existing index is up-to-date, no build needed.\n"
-                    f"- vectors: {st['ntotal']}, files: {st['nfiles']}, generated_at: {st['generated_at']}"
-                )
-                logger.info("BUILD skipped (fresh). %s", msg.replace("\n", " "))
-                return msg
+        with _INDEX_LOCK:
+            if action == "build":
+                if load_index_if_fresh(generated_at or "", project_root_override=override):
+                    st = status()
+                    msg = (
+                        "✅ Existing index is up-to-date, no build needed.\n"
+                        f"- vectors: {st['ntotal']}, files: {st['nfiles']}, generated_at: {st['generated_at']}"
+                    )
+                    logger.info("BUILD skipped (fresh). %s", msg.replace("\n", " "))
+                    return msg
 
-            stats = build_index(chunks, generated_at or "", project_root_override=override)
-            st = status()
-            msg = (
-                "🆕 New index built.\n"
-                f"- vectors: {st['ntotal']} (dim={st['dim']}), files: {st['nfiles']}, generated_at: {st['generated_at']}\n"
-                f"- built_in_sec: {stats.get('built_in_sec')}"
-            )
-            logger.info("BUILD done. %s", msg.replace("\n", " "))
-            return msg
-
-        elif action == "update":
-            if not try_load(project_root_override=override):
                 stats = build_index(chunks, generated_at or "", project_root_override=override)
                 st = status()
                 msg = (
-                    "🆕 Built new index as no existing index found.\n"
+                    "🆕 New index built.\n"
                     f"- vectors: {st['ntotal']} (dim={st['dim']}), files: {st['nfiles']}, generated_at: {st['generated_at']}\n"
                     f"- built_in_sec: {stats.get('built_in_sec')}"
                 )
-                logger.info("UPDATE -> BUILD (no existing). %s", msg.replace("\n", " "))
+                logger.info("BUILD done. %s", msg.replace("\n", " "))
                 return msg
 
-            stats = update_index_diff(chunks, generated_at or "", project_root_override=override)
-            st = status()
-            msg = (
-                "🔄 Differential update completed.\n"
-                f"- files: +{stats['files']['added']} / ~{stats['files']['updated']} / -{stats['files']['removed']}\n"
-                f"- vectors: +{stats['vectors']['added']} / -{stats['vectors']['removed']} / total={stats['vectors']['total']}\n"
-                f"- generated_at: {st['generated_at']}\n"
-                f"- updated_in_sec: {stats.get('updated_in_sec')}"
-            )
-            logger.info("UPDATE done. %s", msg.replace("\n", " "))
-            return msg
+            elif action == "update":
+                if not try_load(project_root_override=override):
+                    stats = build_index(chunks, generated_at or "", project_root_override=override)
+                    st = status()
+                    msg = (
+                        "🆕 Built new index as no existing index found.\n"
+                        f"- vectors: {st['ntotal']} (dim={st['dim']}), files: {st['nfiles']}, generated_at: {st['generated_at']}\n"
+                        f"- built_in_sec: {stats.get('built_in_sec')}"
+                    )
+                    logger.info("UPDATE -> BUILD (no existing). %s", msg.replace("\n", " "))
+                    return msg
 
-        elif action == "rebuild":
-            stats = build_index(chunks, generated_at or "", project_root_override=override)
-            st = status()
-            msg = (
-                "♻️ Forced full rebuild completed.\n"
-                f"- vectors: {st['ntotal']} (dim={st['dim']}), files: {st['nfiles']}, generated_at: {st['generated_at']}\n"
-                f"- built_in_sec: {stats.get('built_in_sec')}"
-            )
-            logger.info("REBUILD done. %s", msg.replace("\n", " "))
-            return msg
+                stats = update_index_diff(chunks, generated_at or "", project_root_override=override)
+                st = status()
+                msg = (
+                    "🔄 Differential update completed.\n"
+                    f"- files: +{stats['files']['added']} / ~{stats['files']['updated']} / -{stats['files']['removed']}\n"
+                    f"- vectors: +{stats['vectors']['added']} / -{stats['vectors']['removed']} / total={stats['vectors']['total']}\n"
+                    f"- generated_at: {st['generated_at']}\n"
+                    f"- updated_in_sec: {stats.get('updated_in_sec')}"
+                )
+                logger.info("UPDATE done. %s", msg.replace("\n", " "))
+                return msg
 
-        else:
-            logger.error("Invalid action: %s", action)
-            return "❌ action must be one of 'build' | 'update' | 'rebuild'."
+            elif action == "rebuild":
+                stats = build_index(chunks, generated_at or "", project_root_override=override)
+                st = status()
+                msg = (
+                    "♻️ Forced full rebuild completed.\n"
+                    f"- vectors: {st['ntotal']} (dim={st['dim']}), files: {st['nfiles']}, generated_at: {st['generated_at']}\n"
+                    f"- built_in_sec: {stats.get('built_in_sec')}"
+                )
+                logger.info("REBUILD done. %s", msg.replace("\n", " "))
+                return msg
+
+            else:
+                logger.error("Invalid action: %s", action)
+                return "❌ action must be one of 'build' | 'update' | 'rebuild'."
 
     except FileNotFoundError as e:
         logger.exception("manage_code_index_for: repo-summary.xml missing.")
