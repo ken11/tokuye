@@ -498,3 +498,89 @@ def list_directory_epic(dir_path: str = ".") -> str:
     except Exception as e:
         return f"Error: {e}"
 
+# ---------------------------------------------------------------------------
+# Project-level shared docs — read-only tools for EpicManagerAgent
+# ---------------------------------------------------------------------------
+# These tools expose <project_root>/docs/ — a directory for project-wide
+# reference documents (architecture notes, API specs, conventions, etc.)
+# that are shared across all Epics.  Write access is intentionally omitted;
+# the directory is managed by the user, not the agent.
+# ---------------------------------------------------------------------------
+
+
+@tool(
+    name="list_project_docs",
+    description=(
+        "List files in the project-level shared docs directory "
+        "(<project_root>/docs/). "
+        "Returns file names, or a message if the directory does not exist or "
+        "is empty."
+    ),
+)
+def list_project_docs() -> str:
+    """List files in <project_root>/docs/.
+
+    Returns:
+        Newline-separated list of file names, or an informational message.
+    """
+    root = _epic_mgmt_root()
+    docs_dir = root / "docs"
+
+    if not docs_dir.exists():
+        return (
+            "docs/ directory does not exist yet. "
+            "Create it under <project_root>/docs/ and place shared documents there."
+        )
+    if not docs_dir.is_dir():
+        return "Error: <project_root>/docs exists but is not a directory."
+
+    entries = sorted(f.name for f in docs_dir.iterdir() if f.is_file())
+    if not entries:
+        return "docs/ directory is empty."
+    return "\n".join(entries)
+
+
+@tool(
+    name="read_project_doc",
+    description=(
+        "Read a file from the project-level shared docs directory "
+        "(<project_root>/docs/<filename>). "
+        "Use this to load project-wide reference documents such as "
+        "architecture notes, API specs, or coding conventions. "
+        "filename must be a simple name (e.g. 'architecture.md'); "
+        "subdirectories are not allowed."
+    ),
+)
+def read_project_doc(filename: str) -> str:
+    """Read <project_root>/docs/<filename>.
+
+    Args:
+        filename: File name inside the docs/ directory (e.g. 'architecture.md').
+                  Must not contain path separators.
+
+    Returns:
+        File contents as a string, or an error message.
+    """
+    if "/" in filename or "\\" in filename:
+        return (
+            f"Error: filename must not contain path separators. "
+            f"Got: '{filename}'. Use a simple name like 'architecture.md'."
+        )
+
+    root = _epic_mgmt_root()
+    docs_dir = root / "docs"
+    target = (docs_dir / filename).resolve()
+
+    # Safety: must stay inside docs/
+    try:
+        target.relative_to(docs_dir.resolve())
+    except ValueError:
+        return f"Error: '{filename}' is outside the docs directory."
+
+    if not target.exists():
+        return f"File not found: {target}"
+    if target.is_dir():
+        return f"Error: '{filename}' is a directory, not a file."
+
+    return target.read_text(encoding="utf-8")
+

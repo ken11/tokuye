@@ -10,8 +10,10 @@ from tokuye.tools.strands_tools.epic_tools.epic_dir_tools import (
     create_epic_dir,
     list_directory_epic,
     list_epic_docs,
+    list_project_docs,
     read_epic_file,
     read_lines_epic,
+    read_project_doc,
     save_epic_decisions,
     save_epic_plan,
     save_epic_tasks,
@@ -62,4 +64,7 @@ epic_manager_tools = [
     # Read-only file tools scoped to the Epic management directory only
     read_lines_epic,
     list_directory_epic,
+    # Project-level shared docs (read-only)
+    list_project_docs,
+    read_project_doc,
 ]
