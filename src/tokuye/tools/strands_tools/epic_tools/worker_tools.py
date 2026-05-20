@@ -67,8 +67,8 @@ from tokuye.tools.strands_tools.text_edit_tools import (
     replace_exact_for,
 )
 from tokuye.tools.strands_tools.project_command_tools import (
+    _list_project_commands_impl,
     _run_project_command_impl,
-    list_project_commands,
 )
 from tokuye.utils.config import settings
 
@@ -768,6 +768,26 @@ def make_epic_worker_tools(repo_root: Path) -> list:
     # ------------------------------------------------------------------
 
     @tool(
+        name="list_project_commands",
+        description=(
+            "List all project commands available for execution.\n\n"
+            "Returns the commands defined in config.yaml ``command_policy.commands``.\n"
+            "Use this tool first to discover what commands are available before calling\n"
+            "``run_project_command``.\n\n"
+            "Returns:\n"
+            "    A dict with a ``commands`` list.  Each entry contains:\n"
+            "      - name: identifier used in run_project_command\n"
+            "      - description: human-readable description\n"
+            "      - resolved_prefix: the argv prefix that will be executed\n"
+            "      - allow_extra_args: whether extra_args are accepted\n"
+            "      - timeout: effective timeout in seconds\n"
+            "      - usage: example invocation dict"
+        ),
+    )
+    def _list_project_commands() -> dict:
+        return _list_project_commands_impl(repo_root)
+
+    @tool(
         name="run_project_command",
         description=(
             "Execute a project command defined in config.yaml after user approval. "
@@ -825,6 +845,6 @@ def make_epic_worker_tools(repo_root: Path) -> list:
         _submit_issue,
         _issue_add_comment,
         # Project commands (cwd bound to repo_root)
-        list_project_commands,
+        _list_project_commands,
         _run_project_command,
     ]
