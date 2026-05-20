@@ -184,13 +184,91 @@ def _init_skills_command(
 _app.command(name="init-skills", help="Copy bundled default skills to a local directory for customisation")(_init_skills_command)
 
 
+def _api_command(
+    project_root: Optional[Path] = typer.Option(
+        None, "--project-root", "-p", help="Root directory of the project (defaults to cwd)"
+    ),
+    host: str = typer.Option("127.0.0.1", "--host", help="Host to bind the API server"),
+    port: int = typer.Option(8000, "--port", help="Port to bind the API server"),
+    log_level: str = typer.Option(
+        "info", "--log-level", "-l", help="Log level (debug, info, warning, error)"
+    ),
+    language: str = typer.Option("en", "--language", "-lang", help="Language"),
+):
+    """Start tokuye as a FastAPI server (API mode).
+
+    Exposes POST /new and POST /sse endpoints.
+    project_root is fixed for the lifetime of the process.
+    """
+    try:
+        import uvicorn
+    except ImportError:
+        typer.echo(
+            "Error: uvicorn is required for API mode. Install it with:\n"
+            "  pip install uvicorn\n"
+            "or:\n"
+            "  pip install tokuye[api]",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+
+    if project_root is None:
+        project_root = Path.cwd()
+    project_root = project_root.absolute()
+
+    if not project_root.exists() or not project_root.is_dir():
+        typer.echo(f"Error: {project_root} is not a valid directory", err=True)
+        raise typer.Exit(code=1)
+
+    settings.project_root = project_root
+    settings.language = language
+    load_yaml_config(settings)
+
+    epic_yaml_path = project_root / ".tokuye" / "epic.yaml"
+    if settings.epic_mode:
+        if not epic_yaml_path.exists():
+            typer.echo(
+                f"Error: Epic Mode is enabled but .tokuye/epic.yaml not found in {project_root}",
+                err=True,
+            )
+            raise typer.Exit(code=1)
+    else:
+        gitignore_path = project_root / ".gitignore"
+        if not gitignore_path.exists():
+            typer.echo(f"Error: .gitignore not found in {project_root}", err=True)
+            raise typer.Exit(code=1)
+
+    _exec_source = _resolve_source_model_id(settings.bedrock_model_id)
+    if "claude-sonnet-4-6" in _exec_source:
+        settings.model_identifier = "sonnet-4-6"
+    if "claude-haiku-4-5-" in _exec_source:
+        settings.model_identifier = "haiku-4-5"
+    if "claude-opus-4-6-" in _exec_source:
+        settings.model_identifier = "opus-4-6"
+    if "devstral-2" in _exec_source:
+        settings.model_identifier = "devstral-2"
+    if "nova-pro-v1" in _exec_source:
+        settings.model_identifier = "nova-pro"
+
+    validate_settings()
+    token_tracker.set_cost_table()
+
+    typer.echo(f"Starting tokuye API server on {host}:{port} (project_root={project_root})")
+
+    from tokuye.api.server import app as fastapi_app
+    uvicorn.run(fastapi_app, host=host, port=port, log_level=log_level)
+
+
+_app.command(name="api", help="Start tokuye as a FastAPI server (API mode)")(_api_command)
+
+
 def cli():
     """CLI entry point."""
     # Backward-compatible: `tokuye [options]` without a subcommand name runs
     # `start` directly.  With a subcommand name (e.g. `tokuye init-skills`),
     # the Typer app dispatches normally.
     import sys
-    subcommands = {"start", "init-skills"}
+    subcommands = {"start", "init-skills", "api"}
     if len(sys.argv) < 2 or sys.argv[1] not in subcommands:
         # No subcommand given — inject "start" so Typer routes to main()
         sys.argv.insert(1, "start")
