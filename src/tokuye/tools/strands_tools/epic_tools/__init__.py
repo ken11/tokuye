@@ -20,6 +20,7 @@ from tokuye.tools.strands_tools.epic_tools.epic_dir_tools import (
     save_task_result,
     update_epic_progress,
     write_epic_doc,
+    write_project_doc,
 )
 from tokuye.tools.strands_tools.epic_tools.repo_ops import (
     file_search_repo,
@@ -64,7 +65,8 @@ epic_manager_tools = [
     # Read-only file tools scoped to the Epic management directory only
     read_lines_epic,
     list_directory_epic,
-    # Project-level shared docs (read-only)
+    # Project-level shared docs (read/write)
     list_project_docs,
     read_project_doc,
+    write_project_doc,
 ]

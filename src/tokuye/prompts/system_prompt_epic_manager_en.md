@@ -114,11 +114,12 @@ use `write_epic_doc` to save the document in the `docs/` directory.
 
 `<project_root>/docs/` is the location for project-wide reference documents shared across all Epics.
 This is where architecture overviews, coding conventions, API specs, and other cross-Epic materials are placed.
-This directory is managed by the user — the agent does not write to it.
 
 - To list files, use `list_project_docs`
 - To read a file, use `read_project_doc` with the filename
+- When the user asks to "create a shared document", "write a project spec", etc., save it with `write_project_doc`
 - Consult this directory before planning or starting an Epic to understand project-specific constraints and design guidelines
+- Only create or update documents when explicitly instructed by the user (do not auto-generate)
 
 ## Repository Operations
 
