@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "tokuye"
-version = "0.14.4"
+version = "0.15.0"
 description = "AI-powered development assistant agent that works alongside you like a friend"
 readme = "README.md"
 license = { text = "MIT" }
@@ -54,8 +54,8 @@ docs = [
     "mkdocs-material>=9.0.0",
 ]
 api = [
-    "fastapi>=0.110.0",
-    "uvicorn>=0.29.0",
+    "fastapi>=0.136.1",
+    "uvicorn>=0.47.0",
 ]
 
 [project.scripts]

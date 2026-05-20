@@ -205,9 +205,9 @@ def _api_command(
     except ImportError:
         typer.echo(
             "Error: uvicorn is required for API mode. Install it with:\n"
-            "  pip install uvicorn\n"
-            "or:\n"
-            "  pip install tokuye[api]",
+            "  uv add uvicorn\n"
+            "or run via uvx:\n"
+            "  uvx --with uvicorn --with fastapi tokuye api",
             err=True,
         )
         raise typer.Exit(code=1)
