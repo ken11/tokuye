@@ -32,6 +32,11 @@ from tokuye.tools.strands_tools.repo_summary_rag.code_search_tool import (
     search_code_for,
 )
 from tokuye.utils.epic_config import resolve_repo_path
+from tokuye.tools.strands_tools.file_management import (
+    file_search_for,
+    list_directory_for,
+    read_lines_for,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -155,3 +160,77 @@ def search_code_epic(repo_name: str, query: str, top_k: int = 3) -> str:
         else:
             prefixed.append(line)
     return "\n".join(prefixed)
+
+
+@tool(
+    name="read_lines_repo",
+    description=(
+        "Read specific lines from a UTF-8 text file inside a repository defined in epic.yaml. "
+        "Access is sandboxed to that repository's root directory; "
+        "files matched by the repository's .gitignore are denied. "
+        "repo_name must be a key defined in .tokuye/epic.yaml. "
+        "Line numbers are 1-indexed and inclusive."
+    ),
+)
+def read_lines_repo(repo_name: str, file_path: str, start_line: int, end_line: int) -> str:
+    """Read lines from a file inside a target repository.
+
+    Args:
+        repo_name: Key from epic.yaml repos (e.g. 'backend').
+        file_path: Path relative to the repository root.
+        start_line: Start line number (1-indexed).
+        end_line: End line number (1-indexed, inclusive).
+
+    Returns:
+        The joined text of the specified line range, or an error message.
+    """
+    repo_root = resolve_repo_path(repo_name)
+    return read_lines_for(repo_root, file_path, start_line, end_line)
+
+
+@tool(
+    name="list_directory_repo",
+    description=(
+        "List files and directories inside a repository defined in epic.yaml. "
+        "Access is sandboxed to that repository's root directory; "
+        "entries matched by the repository's .gitignore are hidden. "
+        "repo_name must be a key defined in .tokuye/epic.yaml."
+    ),
+)
+def list_directory_repo(repo_name: str, dir_path: str = ".") -> str:
+    """List directory entries inside a target repository.
+
+    Args:
+        repo_name: Key from epic.yaml repos (e.g. 'backend').
+        dir_path: Path relative to the repository root (default: repo root itself).
+
+    Returns:
+        Newline-separated list of entries, or an error message.
+    """
+    repo_root = resolve_repo_path(repo_name)
+    return list_directory_for(repo_root, dir_path)
+
+
+@tool(
+    name="file_search_repo",
+    description=(
+        "Recursively search for files whose names match a shell wildcard pattern "
+        "inside a repository defined in epic.yaml. "
+        "Access is sandboxed to that repository's root directory; "
+        "files matched by the repository's .gitignore are excluded. "
+        "repo_name must be a key defined in .tokuye/epic.yaml."
+    ),
+)
+def file_search_repo(repo_name: str, pattern: str, dir_path: str = ".") -> str:
+    """Search for files by name pattern inside a target repository.
+
+    Args:
+        repo_name: Key from epic.yaml repos (e.g. 'backend').
+        pattern: Shell-style wildcard pattern (e.g. '*.py', '**/models.py').
+        dir_path: Sub-directory to search within the repo (default: repo root).
+
+    Returns:
+        Newline-separated list of matched file paths, or an error message.
+    """
+    repo_root = resolve_repo_path(repo_name)
+    return file_search_for(repo_root, pattern, dir_path)

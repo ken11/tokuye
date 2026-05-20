@@ -20,7 +20,10 @@ from tokuye.tools.strands_tools.epic_tools.epic_dir_tools import (
     write_epic_doc,
 )
 from tokuye.tools.strands_tools.epic_tools.repo_ops import (
+    file_search_repo,
+    list_directory_repo,
     manage_code_index_epic,
+    read_lines_repo,
     repo_description_epic,
     repo_summarize_epic,
     search_code_epic,
@@ -50,6 +53,10 @@ epic_manager_tools = [
     repo_description_epic,
     manage_code_index_epic,
     search_code_epic,
+    # Per-repo read-only file tools (sandboxed to each target repo)
+    read_lines_repo,
+    list_directory_repo,
+    file_search_repo,
     # Worker delegation
     run_epic_worker,
     # Read-only file tools scoped to the Epic management directory only
