@@ -118,9 +118,21 @@ Always use the epic-specific tools for repository analysis:
 - `repo_description_epic` : Generate repository overview
 - `manage_code_index_epic` : Update code search index
 - `search_code_epic` : Search code
+- `read_lines_repo` : Read a file in a repository by line range
+- `list_directory_repo` : List directory contents in a repository
+- `file_search_repo` : Search for files by wildcard pattern in a repository
 
 These tools can only operate on repositories defined in `epic.yaml`.
 Accessing repositories not defined there will result in an error.
+
+### Index Update Order (Important)
+
+`manage_code_index_epic` builds the code search index from `repo-summary.xml`.
+If `repo-summary.xml` is stale, even a `rebuild` will produce an index based on old code.
+
+**Always call in this order:**
+1. `repo_summarize_epic` — refresh `repo-summary.xml` to the latest state
+2. `manage_code_index_epic` — build the index from the up-to-date `repo-summary.xml`
 
 ## Delegating to EpicWorkerAgent
 

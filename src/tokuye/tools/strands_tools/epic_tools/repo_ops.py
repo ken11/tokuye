@@ -104,7 +104,10 @@ def repo_description_epic(repo_name: str) -> str:
         "Build or update the FAISS code-search index for a repository defined in epic.yaml. "
         "Stores the index inside that repository's .tokuye/ directory. "
         "repo_name must be a key defined in .tokuye/epic.yaml. "
-        "action: 'build' | 'update' | 'rebuild'."
+        "action: 'build' | 'update' | 'rebuild'. "
+        "IMPORTANT: The index is built from repo-summary.xml. "
+        "Always call repo_summarize_epic first to ensure repo-summary.xml is up to date, "
+        "otherwise the index will reflect stale code."
     ),
 )
 def manage_code_index_epic(repo_name: str, action: str = "update") -> str:

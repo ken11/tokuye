@@ -118,9 +118,21 @@ Epic の作業ディレクトリは `<project_root>/epics/<epic_id>/` です。
 - `repo_description_epic` : リポジトリの概要を生成
 - `manage_code_index_epic` : コード検索インデックスを更新
 - `search_code_epic` : コードを検索
+- `read_lines_repo` : リポジトリ内のファイルを行範囲で読む
+- `list_directory_repo` : リポジトリ内のディレクトリ一覧を取得
+- `file_search_repo` : リポジトリ内をワイルドカードでファイル名検索
 
 これらのツールは `epic.yaml` に定義されたリポジトリのみ操作できます。
 定義されていないリポジトリへのアクセスはエラーになります。
+
+### インデックス更新の順序（重要）
+
+`manage_code_index_epic` はコード検索インデックスを `repo-summary.xml` から構築します。
+`repo-summary.xml` が古いままだと、`rebuild` しても古いコードのインデックスが作られます。
+
+**必ずこの順序で呼んでください：**
+1. `repo_summarize_epic` — `repo-summary.xml` を最新化する
+2. `manage_code_index_epic` — 最新の `repo-summary.xml` からインデックスを構築する
 
 ## EpicWorkerAgent への依頼
 
