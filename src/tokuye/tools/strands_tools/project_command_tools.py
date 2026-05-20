@@ -24,8 +24,15 @@ Approval flow
 -------------
 ``run_project_command`` is defined as ``async def`` so Strands invokes it
 directly on the event loop (not via asyncio.to_thread).  This lets us
-``await approval_event.wait()`` while the TUI handles the next user message
-in a separate ``@work`` coroutine on the same loop.
+await the approval while the TUI handles the next user message in a
+separate ``@work`` coroutine on the same loop.
+
+The approval gate uses ``threading.Event`` (not ``asyncio.Event``) so that
+``resolve_command_approval()`` can be called safely from any thread —
+including the TUI's main thread and the Worker's separate thread/loop in
+Epic Mode.  The async wait is performed via
+``asyncio.get_event_loop().run_in_executor(None, event.wait)`` to keep the
+asyncio event loop unblocked while waiting.
 
 The TUI must:
   1. Call ``set_command_approval_callbacks`` once at startup to register the
@@ -45,6 +52,7 @@ import asyncio
 import logging
 import os
 import subprocess
+import threading
 from pathlib import Path
 from typing import Callable, List, Optional
 
@@ -62,9 +70,13 @@ logger = logging.getLogger(__name__)
 _add_system_message: Optional[Callable[[str], None]] = None
 _set_thinking: Optional[Callable[[bool], None]] = None
 
-# asyncio.Event used to pause run_project_command until the user responds.
+# threading.Event used to pause run_project_command until the user responds.
+# threading.Event (not asyncio.Event) is required because in Epic Mode the
+# Worker runs in a separate thread with its own event loop, while the TUI
+# calls resolve_command_approval() from a different thread.  threading.Event
+# is thread-safe and works correctly across thread boundaries.
 # A new Event is created for each approval request.
-_approval_event: Optional[asyncio.Event] = None
+_approval_event: Optional[threading.Event] = None
 _approval_result: bool = False  # True = approved, False = rejected
 
 
@@ -367,7 +379,7 @@ async def _request_approval(argv: List[str], cwd: Path) -> bool:
         return False
 
     # Create a fresh Event for this approval request.
-    _approval_event = asyncio.Event()
+    _approval_event = threading.Event()
     _approval_result = False
 
     # Show prompt and temporarily re-enable input so the user can type.
@@ -375,8 +387,13 @@ async def _request_approval(argv: List[str], cwd: Path) -> bool:
     _set_thinking(False)
 
     try:
-        # Yield control to the event loop until resolve_command_approval() fires.
-        await _approval_event.wait()
+        # Block in a thread-pool executor so the asyncio event loop stays free
+        # while we wait for the user's y/n response.
+        # Using threading.Event (instead of asyncio.Event) ensures that
+        # resolve_command_approval() called from any thread (including the TUI
+        # thread or a different asyncio loop in Epic Mode) correctly unblocks
+        # this wait.
+        await asyncio.get_event_loop().run_in_executor(None, _approval_event.wait)
     finally:
         # Always restore thinking state and clear the event, even if the
         # coroutine is cancelled (e.g. CancelledError) or another exception
