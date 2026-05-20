@@ -67,8 +67,8 @@ from tokuye.tools.strands_tools.text_edit_tools import (
     replace_exact_for,
 )
 from tokuye.tools.strands_tools.project_command_tools import (
+    _get_policy,
     _run_project_command_impl,
-    list_project_commands,
 )
 from tokuye.utils.config import settings
 
@@ -768,6 +768,41 @@ def make_epic_worker_tools(repo_root: Path) -> list:
     # ------------------------------------------------------------------
 
     @tool(
+        name="list_project_commands",
+        description=(
+            "List all project commands available for execution.\n\n"
+            "Returns the commands defined in config.yaml ``command_policy.commands``.\n"
+            "Use this tool first to discover what commands are available before calling\n"
+            "``run_project_command``.\n\n"
+            "Returns:\n"
+            "    A dict with a ``commands`` list.  Each entry contains:\n"
+            "      - name: identifier used in run_project_command\n"
+            "      - description: human-readable description\n"
+            "      - resolved_prefix: the argv prefix that will be executed\n"
+            "      - allow_extra_args: whether extra_args are accepted\n"
+            "      - timeout: effective timeout in seconds\n"
+            "      - usage: example invocation dict"
+        ),
+    )
+    def _list_project_commands() -> dict:
+        policy = _get_policy(repo_root)
+        result = []
+        for cmd in policy.commands:
+            effective_timeout = cmd.timeout if cmd.timeout is not None else policy.default_timeout
+            result.append({
+                "name": cmd.name,
+                "description": cmd.description,
+                "resolved_prefix": [cmd.command, *cmd.fixed_args],
+                "allow_extra_args": cmd.allow_extra_args,
+                "timeout": effective_timeout,
+                "usage": {
+                    "name": cmd.name,
+                    "extra_args": ["<arg1>", "<arg2>"] if cmd.allow_extra_args else [],
+                },
+            })
+        return {"commands": result}
+
+    @tool(
         name="run_project_command",
         description=(
             "Execute a project command defined in config.yaml after user approval. "
@@ -825,6 +860,6 @@ def make_epic_worker_tools(repo_root: Path) -> list:
         _submit_issue,
         _issue_add_comment,
         # Project commands (cwd bound to repo_root)
-        list_project_commands,
+        _list_project_commands,
         _run_project_command,
     ]

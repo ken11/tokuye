@@ -50,7 +50,7 @@ from typing import Callable, List, Optional
 
 from strands import tool
 
-from tokuye.utils.config import CommandPolicy, settings
+from tokuye.utils.config import CommandPolicy, _parse_command_policy, settings
 
 logger = logging.getLogger(__name__)
 
@@ -124,8 +124,33 @@ def _resolve_cwd(override: Optional[Path] = None) -> Path:
 # Helper: resolve effective command policy
 # ---------------------------------------------------------------------------
 
-def _get_policy() -> CommandPolicy:
-    """Return the active CommandPolicy, or an empty one if not configured."""
+def _get_policy(repo_root: Optional[Path] = None) -> CommandPolicy:
+    """Return the active CommandPolicy, or an empty one if not configured.
+
+    If *repo_root* is given, load the policy from
+    ``<repo_root>/.tokuye/config.yaml`` directly (used by Epic Worker so that
+    each target repository's own command_policy is respected).
+    Falls back to an empty CommandPolicy when the file is absent or has no
+    ``command_policy`` section.
+
+    If *repo_root* is None, fall back to the global ``settings.command_policy``
+    (standard behaviour for the non-Epic code path).
+    """
+    if repo_root is not None:
+        config_path = repo_root / ".tokuye" / "config.yaml"
+        if config_path.exists():
+            try:
+                import yaml
+                with open(config_path, "r", encoding="utf-8") as f:
+                    raw = yaml.safe_load(f)
+                if isinstance(raw, dict) and "command_policy" in raw:
+                    return _parse_command_policy(raw["command_policy"])
+            except Exception:
+                logger.warning(
+                    "Failed to load command_policy from %s", config_path, exc_info=True
+                )
+        return CommandPolicy()
+
     if settings.command_policy is not None:
         return settings.command_policy  # type: ignore[return-value]
     return CommandPolicy()
@@ -201,7 +226,7 @@ async def _run_project_command_impl(
             "message": "Refusing to run project commands as root.",
         }
 
-    policy = _get_policy()
+    policy = _get_policy(repo_root)
     cmd_entry = policy.find(name)
 
     if cmd_entry is None:
