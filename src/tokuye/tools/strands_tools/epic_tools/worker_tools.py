@@ -67,7 +67,7 @@ from tokuye.tools.strands_tools.text_edit_tools import (
     replace_exact_for,
 )
 from tokuye.tools.strands_tools.project_command_tools import (
-    _get_policy,
+    _list_project_commands_impl,
     _run_project_command_impl,
 )
 from tokuye.utils.config import settings
@@ -785,22 +785,7 @@ def make_epic_worker_tools(repo_root: Path) -> list:
         ),
     )
     def _list_project_commands() -> dict:
-        policy = _get_policy(repo_root)
-        result = []
-        for cmd in policy.commands:
-            effective_timeout = cmd.timeout if cmd.timeout is not None else policy.default_timeout
-            result.append({
-                "name": cmd.name,
-                "description": cmd.description,
-                "resolved_prefix": [cmd.command, *cmd.fixed_args],
-                "allow_extra_args": cmd.allow_extra_args,
-                "timeout": effective_timeout,
-                "usage": {
-                    "name": cmd.name,
-                    "extra_args": ["<arg1>", "<arg2>"] if cmd.allow_extra_args else [],
-                },
-            })
-        return {"commands": result}
+        return _list_project_commands_impl(repo_root)
 
     @tool(
         name="run_project_command",

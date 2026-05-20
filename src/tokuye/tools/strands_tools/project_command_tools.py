@@ -157,6 +157,42 @@ def _get_policy(repo_root: Optional[Path] = None) -> CommandPolicy:
 
 
 # ---------------------------------------------------------------------------
+# Internal implementation: _list_project_commands_impl
+# ---------------------------------------------------------------------------
+
+def _list_project_commands_impl(repo_root: Optional[Path] = None) -> dict:
+    """Core implementation of list_project_commands.
+
+    Shared by the standard ``list_project_commands`` tool and the Epic Worker
+    factory in ``epic_tools/worker_tools.py``.
+
+    Args:
+        repo_root: When given, load command_policy from
+                   ``<repo_root>/.tokuye/config.yaml`` (Epic Worker path).
+                   When None, use ``settings.command_policy`` (standard path).
+
+    Returns:
+        A dict with a ``commands`` list.
+    """
+    policy = _get_policy(repo_root)
+    result = []
+    for cmd in policy.commands:
+        effective_timeout = cmd.timeout if cmd.timeout is not None else policy.default_timeout
+        result.append({
+            "name": cmd.name,
+            "description": cmd.description,
+            "resolved_prefix": [cmd.command, *cmd.fixed_args],
+            "allow_extra_args": cmd.allow_extra_args,
+            "timeout": effective_timeout,
+            "usage": {
+                "name": cmd.name,
+                "extra_args": ["<arg1>", "<arg2>"] if cmd.allow_extra_args else [],
+            },
+        })
+    return {"commands": result}
+
+
+# ---------------------------------------------------------------------------
 # Tool: list_project_commands
 # ---------------------------------------------------------------------------
 
@@ -177,22 +213,7 @@ def list_project_commands() -> dict:
           - timeout: effective timeout in seconds
           - usage: example invocation dict
     """
-    policy = _get_policy()
-    result = []
-    for cmd in policy.commands:
-        effective_timeout = cmd.timeout if cmd.timeout is not None else policy.default_timeout
-        result.append({
-            "name": cmd.name,
-            "description": cmd.description,
-            "resolved_prefix": [cmd.command, *cmd.fixed_args],
-            "allow_extra_args": cmd.allow_extra_args,
-            "timeout": effective_timeout,
-            "usage": {
-                "name": cmd.name,
-                "extra_args": ["<arg1>", "<arg2>"] if cmd.allow_extra_args else [],
-            },
-        })
-    return {"commands": result}
+    return _list_project_commands_impl()
 
 
 # ---------------------------------------------------------------------------
