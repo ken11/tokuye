@@ -20,7 +20,7 @@ from __future__ import annotations
 import asyncio
 import uuid
 from dataclasses import dataclass, field
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 
 from tokuye.agent.strands_agent import StrandsAgent
 from tokuye.utils.config import settings
@@ -29,7 +29,7 @@ from tokuye.utils.config import settings
 @dataclass
 class ApiSession:
     session_id: str
-    agent: StrandsAgent
+    agent: Union[StrandsAgent, "EpicManagerAgent"]  # type: ignore[type-arg]
     # Queue of SSE event dicts; None is the sentinel for stream end.
     queue: asyncio.Queue = field(default_factory=asyncio.Queue)
 
@@ -80,7 +80,7 @@ async def create_session() -> ApiSession:
         # Not surfaced in API mode
         pass
 
-    agent = StrandsAgent(
+    common_kwargs = dict(
         thread_id=session_id,
         max_steps=settings.max_steps,
         add_ai_message=_add_ai_message,
@@ -88,6 +88,11 @@ async def create_session() -> ApiSession:
         set_thinking=_set_thinking,
         update_token_usage=_update_token_usage,
     )
+    if settings.epic_mode:
+        from tokuye.agent.epic_manager_agent import EpicManagerAgent
+        agent = EpicManagerAgent(**common_kwargs)
+    else:
+        agent = StrandsAgent(**common_kwargs)
 
     # Register approval callbacks so run_project_command can prompt via SSE.
     from tokuye.tools.strands_tools.project_command_tools import (
