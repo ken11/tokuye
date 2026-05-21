@@ -282,6 +282,19 @@ async def _stream_events(
 
     Loops until the turn is completed (turn_completed or turn_failed).
     Sends a keep-alive comment every _HEARTBEAT_INTERVAL seconds while idle.
+
+    Reconnect handling for approval_required
+    -----------------------------------------
+    When a client reconnects mid-turn (e.g. after a background/foreground
+    transition) with an after_event_id that is >= the approval_required
+    event_id, that event will not be replayed from the store.  To prevent
+    the client from hanging indefinitely, we synthesise a virtual
+    approval_required event whenever:
+      - no stored events remain to flush, AND
+      - the turn is not yet completed, AND
+      - is_waiting_for_command_approval() is True.
+    The synthesised event carries no id so it does not advance the client's
+    Last-Event-ID cursor; a subsequent reconnect will trigger the same check.
     """
     _TERMINAL_TYPES = {"turn_completed", "turn_failed"}
 
@@ -298,6 +311,14 @@ async def _stream_events(
         record = store.get_turn(session_id, turn_id)
         if record is not None and record.completed:
             return
+
+        # Reconnect guard: if the agent is blocked waiting for approval and
+        # there are no new stored events to flush (i.e. the approval_required
+        # event was already consumed in a previous connection), synthesise the
+        # event so the client knows it must call POST /turn/{turn_id}/approve.
+        if is_waiting_for_command_approval():
+            yield f"data: {json.dumps({'type': 'approval_required'}, ensure_ascii=False)}\n\n"
+            # Now block until the approval is resolved and new events arrive.
 
         # Wait for new events (with keep-alive heartbeat)
         try:
