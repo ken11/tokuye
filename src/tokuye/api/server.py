@@ -344,7 +344,7 @@ async def get_messages(session_id: str = Query(...)) -> dict:
 
     return {
         "session_id": session_id,
-        "messages": [m.model_dump() for m in messages],
+        "messages": [m.to_dict() for m in messages],
     }
 
 
