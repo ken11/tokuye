@@ -131,10 +131,22 @@ async def _run_agent(session, message: str) -> None:
         session.queue.put_nowait(None)  # sentinel
 
 
+_HEARTBEAT_INTERVAL = 15  # seconds
+
+
 async def _drain_queue(queue: asyncio.Queue) -> AsyncGenerator[str, None]:
-    """Yield SSE lines from *queue* until the None sentinel is received."""
+    """Yield SSE lines from *queue* until the None sentinel is received.
+
+    Sends an SSE comment (`: keep-alive`) every *_HEARTBEAT_INTERVAL* seconds
+    while the queue is idle, preventing proxies and clients from closing the
+    connection due to inactivity.
+    """
     while True:
-        event = await queue.get()
+        try:
+            event = await asyncio.wait_for(queue.get(), timeout=_HEARTBEAT_INTERVAL)
+        except asyncio.TimeoutError:
+            yield ": keep-alive\n\n"
+            continue
         if event is None:
             yield "data: [DONE]\n\n"
             break
