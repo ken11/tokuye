@@ -102,6 +102,7 @@ class EpicWorkerAgent:
             **({"cache_tools": "default"} if _exec_tool_cache else {}),
             model_id=settings.bedrock_model_id,
             temperature=settings.model_temperature,
+            max_tokens=16384,
         )
 
         # Session: scoped to epic_id + task_id so each task has isolated history
