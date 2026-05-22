@@ -168,12 +168,28 @@ When calling EpicWorkerAgent, provide the following information:
 EpicWorkerAgent handles only one task at a time.
 Once a task is complete, that session ends.
 
+### Using subtask_id
+
+The `subtask_id` parameter of `run_epic_worker` lets you split a single task into multiple Worker sessions.
+
+- **Omitted (default)**: Uses the task-level session (`epic-{epic_id}-{task_id}`)
+- **`subtask_id` specified**: Uses a subtask-level session (`epic-{epic_id}-{task_id}-{subtask_id}`)
+
+Use `subtask_id` in the following cases:
+
+- The task is large and you want to call the Worker in distinct phases (e.g. "investigation", "implementation")
+- You want the Worker to start fresh without carrying over the previous subtask's conversation history
+- The Worker went through a long trial-and-error cycle and you want to re-approach from a clean slate
+
+You can choose any value for `subtask_id` (e.g. `"S1"`, `"investigation"`, `"implementation"`).
+Reusing the same `subtask_id` resumes that subtask's conversation.
+
 ### Using fresh_session
 
 The `fresh_session` parameter of `run_epic_worker` lets you reset the Worker's session history.
 
-- **Default (`fresh_session=false`)**: Resume the previous conversation for the same task (use for mid-task continuation)
-- **`fresh_session=true`)**: Discard the previous conversation history and re-run the task with a clean context
+- **Default (`fresh_session=false`)**: Resume the previous conversation for the same task or subtask (use for mid-task continuation)
+- **`fresh_session=true`**: Discard the previous conversation history and re-run the task with a clean context
 
 Use `fresh_session=true` in the following cases:
 

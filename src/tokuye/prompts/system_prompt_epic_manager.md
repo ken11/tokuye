@@ -168,11 +168,27 @@ EpicWorkerAgent を呼び出すときは、以下の情報を渡してくださ�
 EpicWorkerAgent は1タスクだけを担当します。
 タスクが完了したら、その session は終了します。
 
+### subtask_id の使い方
+
+`run_epic_worker` の `subtask_id` パラメータで、1つのタスクを複数の Worker セッションに分割できます。
+
+- **省略（デフォルト）**: タスク単位のセッション（`epic-{epic_id}-{task_id}`）を使う
+- **`subtask_id` を指定**: サブタスク単位のセッション（`epic-{epic_id}-{task_id}-{subtask_id}`）を使う
+
+以下の場合に `subtask_id` を使ってください：
+
+- タスクが大きく、「調査フェーズ」「実装フェーズ」など段階を分けて Worker を呼び出したい場合
+- 前のサブタスクの会話履歴を引き継がず、クリーンな状態で次の指示を出したい場合
+- Worker が長い試行錯誤をした後、別の観点で再アプローチさせたい場合
+
+`subtask_id` の値は自由に決めてください（例: `"S1"`, `"investigation"`, `"implementation"`）。
+同じ `subtask_id` を再度使えば、そのサブタスクの会話を引き継ぎます。
+
 ### fresh_session の使い方
 
 `run_epic_worker` の `fresh_session` パラメータで、Worker のセッション履歴をリセットできます。
 
-- **デフォルト（`fresh_session=false`）**: 同じタスクの前回の会話を引き継ぐ（途中再開に使う）
+- **デフォルト（`fresh_session=false`）**: 同じタスク（またはサブタスク）の前回の会話を引き継ぐ（途中再開に使う）
 - **`fresh_session=true`**: 前回の会話履歴を破棄し、クリーンな状態でタスクを再実行する
 
 以下の場合は `fresh_session=true` を使ってください：

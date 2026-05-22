@@ -77,9 +77,11 @@ class EpicWorkerAgent:
         task_id: str,
         repo_root: Path,
         fresh_session: bool = False,
+        subtask_id: str | None = None,
     ) -> None:
         self.epic_id = epic_id
         self.task_id = task_id
+        self.subtask_id = subtask_id
         self.repo_root = repo_root.resolve()
 
         # System prompt (language-aware)
@@ -112,7 +114,12 @@ class EpicWorkerAgent:
                 settings.project_root, ".tokuye", "sessions"
             )
         os.makedirs(session_dir, exist_ok=True)
-        session_id = f"epic-{epic_id}-{task_id}"
+        # Session ID: append subtask_id when provided so each subtask gets
+        # its own isolated conversation history within the same task.
+        if subtask_id:
+            session_id = f"epic-{epic_id}-{task_id}-{subtask_id}"
+        else:
+            session_id = f"epic-{epic_id}-{task_id}"
 
         # fresh_session=True: discard any existing session file so the Worker
         # starts with a clean slate (use when retrying a failed task).
