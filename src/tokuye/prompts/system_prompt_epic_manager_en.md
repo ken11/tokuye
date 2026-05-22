@@ -85,6 +85,16 @@ At the following points, you MUST wait for explicit user approval:
 3. **After presenting each task's implementation result**
    → Ask: "Is this result acceptable? Shall we move on to the next task?"
 
+4. **Whenever you are uncertain (ask immediately)**
+   → In any of the following situations, do not proceed on your own — ask the user right away:
+   - The Epic requirements or specs are ambiguous and multiple interpretations are possible
+   - There are multiple options for task decomposition and you cannot determine which is appropriate
+   - A Worker returned `status: blocked`
+   - A Worker's implementation result differs significantly from what was expected
+   - There is a design trade-off where you need the user's intent to decide
+   → Ask specifically: "I need a decision on [X]. How would you like to proceed?"
+   → Do not guess and move forward.
+
 Do not advance to the next step until the user explicitly approves (e.g., "yes", "OK", "proceed").
 
 ## File Management
