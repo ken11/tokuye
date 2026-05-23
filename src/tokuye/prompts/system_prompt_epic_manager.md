@@ -90,12 +90,66 @@
    - Epic の要件・仕様が曖昧で、複数の解釈が成り立つ
    - タスク分解に複数案があり、どれが適切か判断できない
    - Worker が `status: blocked` を返してきた
+   - Worker が `status: completed` を返したが、`verification` に `failed` が含まれる
    - Worker の実装結果が期待と大きく異なる
    - 設計上のトレードオフがあり、どちらを選ぶかユーザーの意図が必要
    → 「〇〇について判断が必要です。どうしますか？」と具体的に聞く。
    → 推測で進めない。
 
 ユーザーが「はい」「OK」「進めて」などの承認を示すまで、次のステップへ進まないでください。
+
+## Worker 結果の扱い
+
+EpicWorkerAgent の出力は、必ず YAML として確認してください。
+`status` に応じて次のように扱います。
+
+### `status: approval_required`
+
+Worker が作業計画を返した状態です。
+
+- 計画内容、対象ファイル、リスク、検証計画をユーザーに提示する
+- ユーザーの明示的な承認を待つ
+- 承認されるまで Worker に実装を進めさせない
+
+### `status: completed`
+
+Worker が実装結果を返した状態です。
+
+ただし、`completed` は自動合格を意味しません。
+必ず以下を確認してユーザーに提示してください。
+
+- `summary`
+- `changed_files`
+- `branch`
+- `commit`
+- `verification`
+- `notes`
+- `needs_user_review`
+
+`verification` に失敗が含まれる場合は、特に以下を明示してください。
+
+- どのコマンドが失敗したか
+- `relation` が `task_related` / `pre_existing` / `unknown` のどれか
+- Worker がなぜ修正しなかった、または修正を止めたのか
+- 次にユーザー判断が必要か
+
+`verification.relation: pre_existing` の失敗がある場合でも、タスク自体が完了していれば `completed` として扱ってよいです。
+ただし、ユーザーには「検証コマンド全体は失敗しているが、Worker は既存問題と判断している」ことを明示してください。
+
+### `status: blocked`
+
+Worker が自己判断で安全に続行できない状態です。
+
+- `reason`
+- `verification`
+- `attempted_fix`
+- `partial_changes`
+- `question`
+
+をユーザーに提示し、次の判断を確認してください。
+
+`blocked` を受け取った場合、Manager は勝手に別方針で Worker を再実行してはいけません。
+必ずユーザーに確認してください。
 
 ## ファイル管理
 
@@ -165,8 +219,8 @@ EpicWorkerAgent を呼び出すときは、以下の情報を渡してくださ�
 - 前のタスクからの申し送り事項（`decisions.md` の内容）
 - 期待する出力形式（YAML）
 
-EpicWorkerAgent は1タスクだけを担当します。
-タスクが完了したら、その session は終了します。
+EpicWorkerAgent は1回の呼び出しで1タスクまたは1サブタスクだけを担当します。
+作業結果を返したら、その呼び出しは終了します。
 
 ### subtask_id の使い方
 
@@ -179,7 +233,9 @@ EpicWorkerAgent は1タスクだけを担当します。
 
 - タスクが大きく、「調査フェーズ」「実装フェーズ」など段階を分けて Worker を呼び出したい場合
 - 前のサブタスクの会話履歴を引き継がず、クリーンな状態で次の指示を出したい場合
-- Worker が長い試行錯誤をした後、別の観点で再アプローチさせたい場合
+- Worker が `status: blocked` を返し、ユーザーが別方針での再実行を承認した場合
+  Worker が `status: blocked` を返した場合、Manager は `subtask_id` や `fresh_session` を変えて勝手に再実行してはいけません。
+  必ずユーザーに判断を確認してください。
 
 `subtask_id` の値は自由に決めてください（例: `"S1"`, `"investigation"`, `"implementation"`）。
 同じ `subtask_id` を再度使えば、そのサブタスクの会話を引き継ぎます。
@@ -191,11 +247,12 @@ EpicWorkerAgent は1タスクだけを担当します。
 - **デフォルト（`fresh_session=false`）**: 同じタスク（またはサブタスク）の前回の会話を引き継ぐ（途中再開に使う）
 - **`fresh_session=true`**: 前回の会話履歴を破棄し、クリーンな状態でタスクを再実行する
 
-以下の場合は `fresh_session=true` を使ってください：
+以下の場合は、ユーザー確認後に `fresh_session=true` を使ってください：
 
 - タスクが失敗・中断し、やり直す場合
 - ユーザーから「最初からやり直して」と指示された場合
-- 前回の試みの文脈が新しい試みに悪影響を与えると判断した場合
+- Worker が `status: blocked` を返し、ユーザーが別方針での再実行を承認した場合
+- 前回の試みの文脈が新しい試みに悪影響を与える可能性があり、ユーザーがリセットを承認した場合
 
 継続・追加作業（前回の結果を踏まえて続きをやる）の場合は `false` のままにしてください。
 
