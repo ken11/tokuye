@@ -44,6 +44,15 @@ from tokuye.utils.token_tracker import token_tracker
 
 logger = logging.getLogger(__name__)
 
+# Bedrock default read_timeout is 60s — too short for long-running Worker tasks.
+_BEDROCK_READ_TIMEOUT = 300  # seconds
+
+
+def _bedrock_client_config():
+    """Return a botocore Config with an extended read timeout for Bedrock calls."""
+    from botocore.config import Config as BotocoreConfig
+    return BotocoreConfig(read_timeout=_BEDROCK_READ_TIMEOUT)
+
 
 def _supports_prompt_cache(model_identifier: str) -> bool:
     return model_identifier in ("sonnet-4-6", "haiku-4-5", "opus-4-6", "nova-pro")
@@ -105,6 +114,7 @@ class EpicWorkerAgent:
             model_id=settings.bedrock_model_id,
             temperature=settings.model_temperature,
             max_tokens=16384,
+            boto_client_config=_bedrock_client_config(),
         )
 
         # Session: scoped to epic_id + task_id so each task has isolated history

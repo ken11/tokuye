@@ -47,6 +47,15 @@ from tokuye.utils.token_tracker import token_tracker
 
 logger = logging.getLogger(__name__)
 
+# Bedrock default read_timeout is 60s — too short for long-running agent turns.
+_BEDROCK_READ_TIMEOUT = 300  # seconds
+
+
+def _bedrock_client_config():
+    """Return a botocore Config with an extended read timeout for Bedrock calls."""
+    from botocore.config import Config as BotocoreConfig
+    return BotocoreConfig(read_timeout=_BEDROCK_READ_TIMEOUT)
+
 
 def _make_bedrock_model(model_id: str, model_identifier: str) -> BedrockModel:
     """Build a BedrockModel with appropriate cache settings."""
@@ -57,6 +66,7 @@ def _make_bedrock_model(model_id: str, model_identifier: str) -> BedrockModel:
         **({"cache_tools": "default"} if cache_tools else {}),
         model_id=model_id,
         temperature=settings.model_temperature,
+        boto_client_config=_bedrock_client_config(),
     )
 
 
