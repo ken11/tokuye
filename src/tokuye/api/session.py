@@ -16,12 +16,22 @@ Session lifecycle
   POST /turn  → get_session(session_id) → start_turn() → returns turn_id immediately
   GET /events → stream events from TurnStore
   (process exit) → sessions are lost; FileSessionManager persists conversation history
+
+Session restore after process restart
+--------------------------------------
+  FileSessionManager persists conversation history under
+  <project_root>/.tokuye/sessions/session_<session_id>/.
+  When a request arrives with a session_id that is not in the in-memory
+  store (e.g. after a process restart), restore_session_if_exists() checks
+  whether that directory exists and, if so, calls create_session() with the
+  existing session_id so the agent picks up the persisted history.
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import uuid
 from dataclasses import dataclass, field
 from typing import Dict, Optional, Union
@@ -59,14 +69,20 @@ def _make_thread_id() -> str:
     return f"api-{uuid.uuid4()}"
 
 
-async def create_session() -> ApiSession:
+async def create_session(session_id: Optional[str] = None) -> ApiSession:
     """Instantiate a new agent and register the session.
+
+    If *session_id* is provided, the agent is initialised with that id so
+    FileSessionManager will load the persisted conversation history from
+    <project_root>/.tokuye/sessions/session_<session_id>/.
+    If omitted, a new unique id is generated.
 
     The agent's callbacks write SSE event dicts into the session queue
     (for POST /sse compatibility) AND into the TurnStore (for GET /events).
     MCP initialisation is deferred to the first __call__ (lazy).
     """
-    session_id = _make_thread_id()
+    if session_id is None:
+        session_id = _make_thread_id()
     queue: asyncio.Queue = asyncio.Queue()
 
     # session is assigned after construction; callbacks close over it via
@@ -176,6 +192,41 @@ async def get_session(session_id: str) -> Optional[ApiSession]:
     """Return the session for *session_id*, or None if not found."""
     async with _lock:
         return _sessions.get(session_id)
+
+
+def _session_dir() -> str:
+    """Return the absolute path to the sessions storage directory."""
+    d = settings.strands_session_dir
+    if not d:
+        d = os.path.join(str(settings.project_root), ".tokuye", "sessions")
+    # strands_session_dir may be a relative path; resolve against project_root
+    if not os.path.isabs(d):
+        d = os.path.join(str(settings.project_root), d)
+    return d
+
+
+def _session_persisted(session_id: str) -> bool:
+    """Return True if FileSessionManager has persisted data for *session_id*.
+
+    FileSessionManager stores data under:
+      <storage_dir>/session_<session_id>/
+    """
+    path = os.path.join(_session_dir(), f"session_{session_id}")
+    return os.path.isdir(path)
+
+
+async def restore_session_if_exists(session_id: str) -> Optional[ApiSession]:
+    """Restore a session from persisted storage if it exists.
+
+    Called when get_session() returns None (e.g. after a process restart).
+    If <storage_dir>/session_<session_id>/ exists, creates a new ApiSession
+    with the same session_id so the agent loads the persisted history.
+    Returns the restored ApiSession, or None if no persisted data is found.
+    """
+    if not _session_persisted(session_id):
+        return None
+    logger.info("Restoring session from persisted storage: %s", session_id)
+    return await create_session(session_id=session_id)
 
 
 async def delete_session(session_id: str) -> None:

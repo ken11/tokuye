@@ -49,6 +49,15 @@ When the agent calls run_project_command it pauses at _approval_event.wait().
 GET /events emits an {"type": "approval_required"} event.
 The client calls POST /turn/{turn_id}/approve with approved=true/false.
 The server calls resolve_command_approval() and the paused agent resumes.
+
+Session restore after process restart
+--------------------------------------
+POST /sse, POST /turn, and GET /messages attempt to restore a session from
+<project_root>/.tokuye/sessions/session_<session_id>/ when the session_id is
+not found in the in-memory store.  If the directory exists the session is
+reconstructed with the same session_id so the agent loads the persisted
+conversation history.  GET /events does NOT restore sessions because turn
+state is in-memory only and cannot survive a process restart.
 """
 
 from __future__ import annotations
@@ -62,7 +71,7 @@ from fastapi import FastAPI, Header, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from tokuye.api.session import create_session, get_session, start_turn
+from tokuye.api.session import create_session, get_session, restore_session_if_exists, start_turn
 from tokuye.tools.strands_tools.project_command_tools import (
     is_waiting_for_command_approval,
     resolve_command_approval,
@@ -122,6 +131,8 @@ async def new_session() -> NewSessionResponse:
 async def sse_turn(body: SseRequest) -> StreamingResponse:
     """Run one agent turn and stream the response as SSE."""
     session = await get_session(body.session_id)
+    if session is None:
+        session = await restore_session_if_exists(body.session_id)
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
 
@@ -211,6 +222,8 @@ async def post_turn(body: TurnRequest) -> TurnResponse:
     agent's response.
     """
     session = await get_session(body.session_id)
+    if session is None:
+        session = await restore_session_if_exists(body.session_id)
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
 
@@ -346,6 +359,8 @@ async def get_messages(session_id: str = Query(...)) -> dict:
     transition.
     """
     session = await get_session(session_id)
+    if session is None:
+        session = await restore_session_if_exists(session_id)
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
 
