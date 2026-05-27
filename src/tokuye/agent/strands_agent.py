@@ -8,6 +8,7 @@ from strands.agent import AgentResult
 from strands.agent.conversation_manager import SummarizingConversationManager
 from strands.models import BedrockModel
 from strands.session.file_session_manager import FileSessionManager
+from strands.tools.executors import SequentialToolExecutor
 from strands.vended_plugins.skills import AgentSkills
 from tokuye.agent.node_agents import NodeAgents
 from tokuye.agent.state_machine import DevState, StateClassifier, StateMachine
@@ -264,6 +265,7 @@ class StrandsAgent:
                 summarization_system_prompt=self.summary_prompt
             ),
             callback_handler=self._callback_handler,
+            tool_executor=SequentialToolExecutor(),
             **({"plugins": [_skills_plugin]} if _skills_plugin else {}),
         )
 

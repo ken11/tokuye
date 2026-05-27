@@ -34,6 +34,7 @@ from strands import Agent
 from strands.agent.conversation_manager import SummarizingConversationManager
 from strands.models import BedrockModel
 from strands.session.file_session_manager import FileSessionManager
+from strands.tools.executors import SequentialToolExecutor
 
 from tokuye.prompts.prompt_loader import load_prompt, load_prompt_if_exists
 from tokuye.tools.strands_tools import (
@@ -137,12 +138,14 @@ class NodeAgents:
             system_prompt=plan_to_dev_prompt,
             tools=[],
             callback_handler=None,
+            tool_executor=SequentialToolExecutor(),
         )
         self._dev_to_pr_agent = Agent(
             model=_make_bedrock_model(settings.bedrock_model_id, settings.model_identifier),
             system_prompt=dev_to_pr_prompt,
             tools=[],
             callback_handler=None,
+            tool_executor=SequentialToolExecutor(),
         )
 
         # --- Planner ------------------------------------------------------
@@ -161,6 +164,7 @@ class NodeAgents:
                 summarization_system_prompt=summary_prompt
             ),
             callback_handler=self._make_callback("planner"),
+            tool_executor=SequentialToolExecutor(),
         )
 
         # --- Developer ----------------------------------------------------
@@ -176,6 +180,7 @@ class NodeAgents:
                 summarization_system_prompt=summary_prompt
             ),
             callback_handler=self._make_callback("developer"),
+            tool_executor=SequentialToolExecutor(),
         )
 
         # --- PR Creator ---------------------------------------------------
@@ -194,6 +199,7 @@ class NodeAgents:
                 summarization_system_prompt=summary_prompt
             ),
             callback_handler=self._make_callback("pr_creator"),
+            tool_executor=SequentialToolExecutor(),
         )
 
         # --- Reviewer -----------------------------------------------------
@@ -212,6 +218,7 @@ class NodeAgents:
                 summarization_system_prompt=summary_prompt
             ),
             callback_handler=self._make_callback("reviewer"),
+            tool_executor=SequentialToolExecutor(),
         )
 
         logger.info(
