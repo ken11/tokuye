@@ -39,9 +39,14 @@ logger = logging.getLogger(__name__)
         "repo_name must be a key defined in .tokuye/epic.yaml. "
         "Calling with the same epic_id + task_id resumes the existing session; "
         "changing task_id starts a new isolated session. "
-        "Use subtask_id to split a task into multiple Worker sessions: each unique "
-        "subtask_id value creates an independent session within the same task, so "
-        "the Worker starts fresh without the previous subtask's conversation history. "
+        "Within a single task, planning and implementation MUST use the same session "
+        "(same task_id, no subtask_id or the same subtask_id) so the Worker that "
+        "created the plan is the one that executes it. "
+        "Use subtask_id ONLY when a task contains completely independent sub-units "
+        "that must NOT share conversation history (e.g. separate repos, unrelated "
+        "work streams). Do NOT use different subtask_id values to split planning "
+        "and implementation — that creates two isolated Workers and the implementer "
+        "loses all context from the planner. "
         "Set fresh_session=true to discard the previous session history and "
         "start the task (or subtask) from scratch (use when retrying a failed or incomplete task)."
     ),
@@ -69,10 +74,14 @@ def run_epic_worker(
             attempt with stale conversation history.  Defaults to False
             (resume existing session).
         subtask_id: Optional subtask identifier within the task (e.g. 'S1',
-            'investigation', 'implementation').  When provided, the Worker
-            session is scoped to ``epic_id + task_id + subtask_id`` so each
-            subtask starts with an isolated conversation history.  Omit (or
-            pass None) to use the default task-level session.
+            'part-a', 'part-b').  When provided, the Worker session is scoped
+            to ``epic_id + task_id + subtask_id`` so each subtask starts with
+            an isolated conversation history.  Use ONLY for completely
+            independent sub-units within a task.  Do NOT use different
+            subtask_id values to split planning and implementation — the
+            planner and implementer must share the same session so the Worker
+            that built the plan is the one that executes it.  Omit (or pass
+            None) to use the default task-level session.
 
     Returns:
         Raw YAML result string from EpicWorkerAgent.

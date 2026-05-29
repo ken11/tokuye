@@ -240,15 +240,27 @@ EpicWorkerAgent は1回の呼び出しで1タスクまたは1サブタスクだ�
 - **省略（デフォルト）**: タスク単位のセッション（`epic-{epic_id}-{task_id}`）を使う
 - **`subtask_id` を指定**: サブタスク単位のセッション（`epic-{epic_id}-{task_id}-{subtask_id}`）を使う
 
-以下の場合に `subtask_id` を使ってください：
+#### 原則：plan と実装は必ず同一セッションで行う
 
-- タスクが大きく、「調査フェーズ」「実装フェーズ」など段階を分けて Worker を呼び出したい場合
-- 前のサブタスクの会話履歴を引き継がず、クリーンな状態で次の指示を出したい場合
+**`subtask_id` を使って plan フェーズと実装フェーズを分けてはいけません。**
+
+Worker が `status: approval_required` で計画を返した場合、Manager はユーザーの承認を取ったうえで、
+**同じセッション**（同じ `task_id`、`subtask_id` なし or 同じ `subtask_id`）で Worker に続きを依頼してください。
+計画を作った Worker がそのまま実装するので、調査結果・設計判断・ファイル把握がすべて引き継がれます。
+
+別の `subtask_id` で実装を依頼すると、計画を知らない新しい Worker が起動し、
+調査のやり直し・設計の齟齬・二度手間が発生します。
+
+#### subtask_id を使ってよい場合
+
+タスク内に**完全に独立した**作業単位が複数あり、互いの会話履歴を共有する必要がない場合のみ使ってください。
+
+- 複数リポジトリへの独立した変更を別々の Worker に担当させる場合
+- 前のサブタスクの文脈が次のサブタスクに不要・有害な場合
 - Worker が `status: blocked` を返し、ユーザーが別方針での再実行を承認した場合
-  Worker が `status: blocked` を返した場合、Manager は `subtask_id` や `fresh_session` を変えて勝手に再実行してはいけません。
-  必ずユーザーに判断を確認してください。
+  （Worker が `status: blocked` を返した場合、Manager は `subtask_id` や `fresh_session` を変えて勝手に再実行してはいけません。必ずユーザーに判断を確認してください。）
 
-`subtask_id` の値は自由に決めてください（例: `"S1"`, `"investigation"`, `"implementation"`）。
+`subtask_id` の値は自由に決めてください（例: `"S1"`, `"part-a"`, `"part-b"`）。
 同じ `subtask_id` を再度使えば、そのサブタスクの会話を引き継ぎます。
 
 ### fresh_session の使い方

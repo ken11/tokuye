@@ -242,15 +242,29 @@ The `subtask_id` parameter of `run_epic_worker` lets you split a single task int
 - **Omitted (default)**: Uses the task-level session (`epic-{epic_id}-{task_id}`)
 - **`subtask_id` specified**: Uses a subtask-level session (`epic-{epic_id}-{task_id}-{subtask_id}`)
 
-Use `subtask_id` in the following cases:
+#### Rule: planning and implementation MUST share the same session
 
-- The task is large and you want to call the Worker in distinct phases (e.g. "investigation", "implementation")
-- You want the Worker to start fresh without carrying over the previous subtask's conversation history
+**Do NOT use different `subtask_id` values to split the planning phase from the implementation phase.**
+
+When a Worker returns `status: approval_required` with a plan, the Manager should obtain user approval
+and then call the Worker again using **the same session** (same `task_id`, no `subtask_id` or the same
+`subtask_id`). This way the Worker that built the plan is the one that executes it, carrying over all
+investigation results, design decisions, and file context.
+
+Calling with a different `subtask_id` for implementation spins up a brand-new Worker that knows nothing
+about the plan — it will re-investigate, introduce inconsistencies, and duplicate work.
+
+#### When subtask_id is appropriate
+
+Use it only when a task contains **completely independent** sub-units that must NOT share conversation history.
+
+- Assigning independent changes to multiple repositories to separate Workers
+- When the previous subtask's context is irrelevant or harmful to the next subtask
 - A Worker returned `status: blocked` and the user has approved a re-run with a different approach
-  When a Worker returns `status: blocked`, the Manager must NOT change `subtask_id` or `fresh_session` and re-run on its own.
-  Always ask the user for a decision first.
+  (When a Worker returns `status: blocked`, the Manager must NOT change `subtask_id` or `fresh_session`
+  and re-run on its own. Always ask the user for a decision first.)
 
-You can choose any value for `subtask_id` (e.g. `"S1"`, `"investigation"`, `"implementation"`).
+You can choose any value for `subtask_id` (e.g. `"S1"`, `"part-a"`, `"part-b"`).
 Reusing the same `subtask_id` resumes that subtask's conversation.
 
 ### Using fresh_session
