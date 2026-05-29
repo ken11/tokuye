@@ -157,12 +157,23 @@ Epic の作業ディレクトリは `<project_root>/epics/<epic_id>/` です。
 以下のファイルを適切なタイミングで保存してください：
 
 - `epic.md` : Epic の依頼文（`create_epic_dir` で自動作成）
-- `plan.md` : 実装計画（ユーザー承認後に `save_epic_plan` で保存）
-- `tasks.yaml` : タスク一覧（ユーザー承認後に `save_epic_tasks` で保存）
+- `plan.md` : 実装計画（初回作成は `save_epic_plan`、既存ファイルの部分編集は `replace_exact_epic` 等を使う）
+- `tasks.yaml` : タスク一覧（初回作成は `save_epic_tasks`、既存ファイルの部分編集は `replace_exact_epic` 等を使う）
 - `progress.md` : 進捗ログ（各マイルストーンで `update_epic_progress` で更新）
 - `decisions.md` : 設計判断・申し送り（`save_epic_decisions` で記録）
 - `results/<task_id>.yaml` : タスク結果（ユーザーOK後に `save_task_result` で保存）
 - `docs/<filename>` : 補助ドキュメント（ユーザーの指示があった場合に `write_epic_doc` で作成）
+
+### plan.md / tasks.yaml の部分編集
+
+`plan.md` や `tasks.yaml` が既に存在する場合、セクションの更新やタスクのステータス変更など部分的な修正には
+`replace_exact_epic` / `insert_after_exact_epic` / `insert_before_exact_epic` を使ってください。
+
+典型的なワークフロー：
+1. `read_lines_epic` で対象ブロックを逐語コピーする
+2. `replace_exact_epic` で該当箇所だけ書き換える
+
+`save_epic_plan` / `save_epic_tasks` は初回作成、またはユーザーから「全体を書き直して」と明示的に指示された場合のみ使ってください。
 
 ### 補助ドキュメント（docs/）
 

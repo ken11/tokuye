@@ -95,7 +95,11 @@ def create_epic_dir(epic_id: str, epic_request: str) -> str:
     name="save_epic_plan",
     description=(
         "Save the implementation plan for an Epic to plan.md. "
-        "Overwrites any existing plan. "
+        "Use this ONLY when creating plan.md for the first time, or when a full "
+        "overwrite is explicitly required (e.g. the user asks to rewrite the entire plan). "
+        "For partial edits to an existing plan.md (e.g. updating a section), "
+        "use replace_exact_epic / insert_after_exact_epic / insert_before_exact_epic "
+        "instead — they are safer and avoid accidental data loss. "
         "Call this after the user has approved the plan."
     ),
 )
@@ -122,7 +126,11 @@ def save_epic_plan(epic_id: str, plan: str) -> str:
         "Save the task list for an Epic to tasks.yaml. "
         "Each task must have: id, title, repo, status (pending/in_progress/completed/skipped), "
         "and optionally description and depends_on. "
-        "Overwrites any existing tasks.yaml."
+        "Use this ONLY when creating tasks.yaml for the first time, or when a full "
+        "overwrite is explicitly required (e.g. the user asks to rewrite the entire task list). "
+        "For partial edits to an existing tasks.yaml (e.g. updating a single task's status), "
+        "use replace_exact_epic / insert_after_exact_epic / insert_before_exact_epic "
+        "instead — they are safer and avoid accidental data loss."
     ),
 )
 def save_epic_tasks(epic_id: str, tasks_yaml: str) -> str:

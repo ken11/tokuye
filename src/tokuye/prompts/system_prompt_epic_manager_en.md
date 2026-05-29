@@ -157,12 +157,25 @@ The Epic working directory is `<project_root>/epics/<epic_id>/`.
 Save the following files at the appropriate times:
 
 - `epic.md` : Original Epic request (auto-created by `create_epic_dir`)
-- `plan.md` : Implementation plan (save with `save_epic_plan` after user approval)
-- `tasks.yaml` : Task list (save with `save_epic_tasks` after user approval)
+- `plan.md` : Implementation plan (use `save_epic_plan` for initial creation; use `replace_exact_epic` etc. for partial edits to an existing file)
+- `tasks.yaml` : Task list (use `save_epic_tasks` for initial creation; use `replace_exact_epic` etc. for partial edits to an existing file)
 - `progress.md` : Progress log (update with `update_epic_progress` at each milestone)
 - `decisions.md` : Design decisions / handoff notes (record with `save_epic_decisions`)
 - `results/<task_id>.yaml` : Task results (save with `save_task_result` after user OK)
 - `docs/<filename>` : Supplementary documents (create with `write_epic_doc` when instructed by the user)
+
+### Partial Edits to plan.md / tasks.yaml
+
+When `plan.md` or `tasks.yaml` already exists, use
+`replace_exact_epic` / `insert_after_exact_epic` / `insert_before_exact_epic`
+for partial modifications such as updating a section or changing a task's status.
+
+Typical workflow:
+1. Use `read_lines_epic` to copy the target block verbatim
+2. Use `replace_exact_epic` to rewrite only that block
+
+Use `save_epic_plan` / `save_epic_tasks` only for initial file creation, or when the user
+explicitly asks to rewrite the entire file.
 
 ### Supplementary Documents (docs/)
 
