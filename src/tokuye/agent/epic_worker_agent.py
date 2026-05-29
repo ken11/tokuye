@@ -38,6 +38,7 @@ from strands.models.bedrock import CacheConfig
 from strands.session.file_session_manager import FileSessionManager
 from strands.tools.executors import SequentialToolExecutor
 
+from tokuye.agent.context_utils import compact_tool_history
 from tokuye.agent.strands_agent import (
     _build_skills_plugin_for_repo,
     _is_opus,
@@ -114,6 +115,7 @@ class EpicWorkerAgent:
             model_id=settings.bedrock_model_id,
             **({"additional_request_fields": _opus_additional_request_fields()} if _exec_opus else {"temperature": settings.model_temperature}),
             max_tokens=16384,
+            context_window_limit=80_000,
             boto_client_config=_bedrock_client_config(),
         )
 
@@ -165,7 +167,10 @@ class EpicWorkerAgent:
             system_prompt=self.system_prompt,
             session_manager=self.session_manager,
             conversation_manager=SummarizingConversationManager(
-                summarization_system_prompt=self.summary_prompt
+                summarization_system_prompt=self.summary_prompt,
+                proactive_compression={"compression_threshold": 0.35},
+                summary_ratio=0.5,
+                preserve_recent_messages=8,
             ),
             callback_handler=null_callback_handler,
             tool_executor=SequentialToolExecutor(),
@@ -185,6 +190,7 @@ class EpicWorkerAgent:
         # Merge Worker token usage into the shared token_tracker so that
         # EpicManagerAgent's TUI display reflects the full cost of the turn.
         self._merge_token_usage(result)
+        self.agent.messages = compact_tool_history(self.agent.messages)
         # Extract text content from AgentResult
         if hasattr(result, "message") and result.message:
             content = result.message.get("content", [])

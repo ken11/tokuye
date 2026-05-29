@@ -31,6 +31,8 @@ from strands.session.file_session_manager import FileSessionManager
 from strands.tools.executors import SequentialToolExecutor
 from strands.vended_plugins.skills import AgentSkills
 
+from tokuye.agent.context_utils import compact_tool_history
+
 from tokuye.agent.strands_agent import (
     _build_skills_plugin,
     _is_opus,
@@ -102,6 +104,7 @@ class EpicManagerAgent:
             **({"cache_tools": "default"} if _exec_tool_cache else {}),
             model_id=manager_model_id,
             **({"additional_request_fields": _opus_additional_request_fields()} if _exec_opus else {"temperature": settings.model_temperature}),
+            context_window_limit=80_000,
             boto_client_config=_bedrock_client_config(),
         )
 
@@ -154,7 +157,10 @@ class EpicManagerAgent:
             system_prompt=self.system_prompt,
             session_manager=self.session_manager,
             conversation_manager=SummarizingConversationManager(
-                summarization_system_prompt=self.summary_prompt
+                summarization_system_prompt=self.summary_prompt,
+                proactive_compression={"compression_threshold": 0.35},
+                summary_ratio=0.5,
+                preserve_recent_messages=8,
             ),
             callback_handler=self._callback_handler,
             tool_executor=SequentialToolExecutor(),
@@ -176,6 +182,7 @@ class EpicManagerAgent:
             token_tracker.reset_turn()
             result = await self.agent.invoke_async(message, **kwargs)
             self._update_token_usage(result)
+            self.agent.messages = compact_tool_history(self.agent.messages)
             return result
         finally:
             self.set_thinking(False)
