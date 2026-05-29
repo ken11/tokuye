@@ -27,7 +27,7 @@ class TestCompactToolMessage:
         assert len(result["content"]) == 1
         text = result["content"][0]["text"]
         assert "read_file" in text
-        assert "[Compacted tool history]" in text
+        assert "[Past tool calls" in text
         # original text block must be gone
         assert "まず状況を把握する" not in text
 

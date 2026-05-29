@@ -38,7 +38,10 @@ def compact_tool_message(message: dict) -> dict | None:
     if role == "assistant":
         tool_names = [b["toolUse"]["name"] for b in content if "toolUse" in b]
         if tool_names:
-            summary = "[Compacted tool history]\n" + "\n".join(f"- {n}" for n in tool_names)
+            summary = (
+                "[Past tool calls — completed in a prior context window, not the current session]\n"
+                + "\n".join(f"- {n}" for n in tool_names)
+            )
             return {"role": "assistant", "content": [{"text": summary}]}
         # No toolUse — pure text message, keep as-is
         return message
