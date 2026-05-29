@@ -60,8 +60,8 @@ def _bedrock_client_config():
 
 def _make_bedrock_model(model_id: str, model_identifier: str) -> BedrockModel:
     """Build a BedrockModel with appropriate cache settings."""
-    cache_prompt = model_identifier in ("sonnet-4-6", "haiku-4-5", "opus-4-6", "nova-pro")
-    cache_tools = model_identifier in ("sonnet-4-6", "haiku-4-5", "opus-4-6")
+    cache_prompt = model_identifier in ("sonnet-4-6", "haiku-4-5", "opus", "nova-pro")
+    cache_tools = model_identifier in ("sonnet-4-6", "haiku-4-5", "opus")
     return BedrockModel(
         **({"cache_prompt": "default"} if cache_prompt else {}),
         **({"cache_tools": "default"} if cache_tools else {}),

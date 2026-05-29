@@ -38,7 +38,7 @@ def _supports_prompt_cache(model_identifier: str) -> bool:
     raw model_id / ARN.  Claude models and Amazon Nova Pro support prompt
     caching; Mistral Devstral does not.
     """
-    return model_identifier in ("sonnet-4-6", "haiku-4-5", "opus-4-6", "nova-pro")
+    return model_identifier in ("sonnet-4-6", "haiku-4-5", "opus", "nova-pro")
 
 
 def _supports_tool_cache(model_identifier: str) -> bool:
@@ -48,7 +48,7 @@ def _supports_tool_cache(model_identifier: str) -> bool:
     caching; tool-level caching (cachePoint in toolConfig) causes a
     ValidationException.  Only Claude models support cache_tools.
     """
-    return model_identifier in ("sonnet-4-6", "haiku-4-5", "opus-4-6")
+    return model_identifier in ("sonnet-4-6", "haiku-4-5", "opus")
 
 
 def _build_skills_plugin() -> AgentSkills | None:

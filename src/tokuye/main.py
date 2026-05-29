@@ -67,8 +67,8 @@ def main(
         settings.model_identifier = "sonnet-4-6"
     if "claude-haiku-4-5-" in _exec_source:
         settings.model_identifier = "haiku-4-5"
-    if "claude-opus-4-6-" in _exec_source:
-        settings.model_identifier = "opus-4-6"
+    if "claude-opus-4-8" in _exec_source:
+        settings.model_identifier = "opus"
     if "devstral-2" in _exec_source:
         settings.model_identifier = "devstral-2"
     if "nova-pro-v1" in _exec_source:
@@ -80,8 +80,8 @@ def main(
             return "sonnet-4-6"
         if "claude-haiku-4-5-" in source:
             return "haiku-4-5"
-        if "claude-opus-4-6-" in source:
-            return "opus-4-6"
+        if "claude-opus-4-8" in source:
+            return "opus"
         if "devstral-2" in source:
             return "devstral-2"
         if "nova-pro-v1" in source:
@@ -243,8 +243,8 @@ def _api_command(
         settings.model_identifier = "sonnet-4-6"
     if "claude-haiku-4-5-" in _exec_source:
         settings.model_identifier = "haiku-4-5"
-    if "claude-opus-4-6-" in _exec_source:
-        settings.model_identifier = "opus-4-6"
+    if "claude-opus-4-8" in _exec_source:
+        settings.model_identifier = "opus"
     if "devstral-2" in _exec_source:
         settings.model_identifier = "devstral-2"
     if "nova-pro-v1" in _exec_source:

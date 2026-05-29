@@ -17,7 +17,7 @@ MODEL_COST = {
         "cache_write": 0.00125,
         "cache_read": 0.0001,
     },
-    "opus-4-6": {
+    "opus": {
         "input": 0.005,
         "output": 0.025,
         "cache_write": 0.00625,

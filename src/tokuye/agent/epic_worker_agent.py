@@ -56,11 +56,11 @@ def _bedrock_client_config():
 
 
 def _supports_prompt_cache(model_identifier: str) -> bool:
-    return model_identifier in ("sonnet-4-6", "haiku-4-5", "opus-4-6", "nova-pro")
+    return model_identifier in ("sonnet-4-6", "haiku-4-5", "opus", "nova-pro")
 
 
 def _supports_tool_cache(model_identifier: str) -> bool:
-    return model_identifier in ("sonnet-4-6", "haiku-4-5", "opus-4-6")
+    return model_identifier in ("sonnet-4-6", "haiku-4-5", "opus")
 
 
 class EpicWorkerAgent:
