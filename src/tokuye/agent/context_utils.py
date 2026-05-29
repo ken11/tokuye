@@ -53,6 +53,14 @@ def compact_tool_message(message: dict) -> dict | None:
     return message
 
 
+def _has_tool_result(message: dict) -> bool:
+    """Return True if the message contains any toolResult block."""
+    content = message.get("content", [])
+    if not isinstance(content, list):
+        return False
+    return any("toolResult" in b for b in content)
+
+
 def compact_tool_history(
     messages: list[dict],
     preserve_recent_messages: int = 8,
@@ -64,8 +72,12 @@ def compact_tool_history(
     - toolUse assistant messages → single summary text message
     - toolResult user messages → dropped
 
-    This reduces the token count of the history passed to the model on each
-    turn without losing the essential record of what tools were executed.
+    The split point is adjusted so that a toolResult message is never left
+    in the recent window without its paired toolUse message.  If the first
+    message of the recent window contains toolResult blocks, the boundary is
+    moved backward until the recent window starts with a non-toolResult
+    message.  This prevents Bedrock from rejecting the request with a
+    "toolResult count exceeds toolUse count" validation error.
 
     Args:
         messages: Full conversation history (agent.messages).
@@ -77,8 +89,14 @@ def compact_tool_history(
     if len(messages) <= preserve_recent_messages:
         return messages
 
-    old = messages[:-preserve_recent_messages]
-    recent = messages[-preserve_recent_messages:]
+    old = list(messages[:-preserve_recent_messages])
+    recent = list(messages[-preserve_recent_messages:])
+
+    # Adjust split point: if recent starts with a toolResult message, move
+    # it (and any preceding toolUse partner) back into old so the pair is
+    # compacted together.
+    while old and _has_tool_result(recent[0]):
+        recent.insert(0, old.pop())
 
     compacted: list[dict] = []
     for msg in old:

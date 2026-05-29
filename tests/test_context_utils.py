@@ -1,7 +1,7 @@
 """Tests for tokuye.agent.context_utils."""
 
 import pytest
-from tokuye.agent.context_utils import compact_tool_message, compact_tool_history
+from tokuye.agent.context_utils import compact_tool_message, compact_tool_history, _has_tool_result
 
 
 # ---------------------------------------------------------------------------
@@ -152,3 +152,60 @@ class TestCompactToolHistory:
         assert "tool_0" in all_text
         assert "tool_1" in all_text
         assert "tool_2" in all_text
+
+    def test_split_boundary_never_strands_toolresult(self):
+        """recent window must not start with a toolResult message.
+
+        If the split point lands between a toolUse and its toolResult,
+        the boundary must be moved back so the pair stays together.
+        """
+        # Build: toolUse at index 0, toolResult at index 1, then plain messages
+        msgs = [
+            {
+                "role": "assistant",
+                "content": [
+                    {"toolUse": {"toolUseId": "id0", "name": "grep", "input": {}}},
+                ],
+            },
+            {
+                "role": "user",
+                "content": [
+                    {"toolResult": {"toolUseId": "id0", "status": "success", "content": [{"text": "found"}]}},
+                ],
+            },
+            {"role": "user", "content": [{"text": "ok"}]},
+            {"role": "assistant", "content": [{"text": "done"}]},
+        ]
+        # preserve_recent_messages=3 would normally put the split between
+        # index 0 (toolUse) and index 1 (toolResult).
+        result = compact_tool_history(msgs, preserve_recent_messages=3)
+        # recent window must not start with a toolResult
+        assert not _has_tool_result(result[0]) if result else True
+        # No orphaned toolResult in any position
+        for i, msg in enumerate(result):
+            content = msg.get("content", [])
+            has_tr = any("toolResult" in b for b in content)
+            if has_tr:
+                # There must be a preceding assistant message with toolUse
+                preceding_roles = [m["role"] for m in result[:i]]
+                assert "assistant" in preceding_roles
+
+    def test_split_boundary_all_toolresult_messages(self):
+        """Boundary adjustment must not infinite-loop when old becomes empty."""
+        msgs = [
+            {
+                "role": "user",
+                "content": [
+                    {"toolResult": {"toolUseId": "id0", "status": "success", "content": [{"text": "r"}]}},
+                ],
+            },
+            {
+                "role": "user",
+                "content": [
+                    {"toolResult": {"toolUseId": "id1", "status": "success", "content": [{"text": "r"}]}},
+                ],
+            },
+        ]
+        # Should not raise; returns messages as-is when old is exhausted
+        result = compact_tool_history(msgs, preserve_recent_messages=1)
+        assert isinstance(result, list)
