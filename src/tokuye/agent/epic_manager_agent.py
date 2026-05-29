@@ -101,7 +101,7 @@ class EpicManagerAgent:
             **({"cache_prompt": "default"} if _exec_cache else {}),
             **({"cache_tools": "default"} if _exec_tool_cache else {}),
             model_id=manager_model_id,
-            temperature=settings.model_temperature,
+            # temperature=settings.model_temperature,
             boto_client_config=_bedrock_client_config(),
         )
 
