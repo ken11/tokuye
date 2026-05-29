@@ -59,14 +59,24 @@ def _bedrock_client_config():
 
 
 def _make_bedrock_model(model_id: str, model_identifier: str) -> BedrockModel:
-    """Build a BedrockModel with appropriate cache settings."""
+    """Build a BedrockModel with appropriate cache settings.
+
+    For Claude Opus 4.7+ (model_identifier == "opus"), adaptive thinking is
+    enabled via additional_request_fields and temperature is omitted (required
+    by the Bedrock API when thinking is active).
+    """
+    from tokuye.agent.strands_agent import (
+        _is_opus,
+        _opus_additional_request_fields,
+    )
     cache_prompt = model_identifier in ("sonnet-4-6", "haiku-4-5", "opus", "nova-pro")
     cache_tools = model_identifier in ("sonnet-4-6", "haiku-4-5", "opus")
+    is_opus = _is_opus(model_identifier)
     return BedrockModel(
         **({"cache_prompt": "default"} if cache_prompt else {}),
         **({"cache_tools": "default"} if cache_tools else {}),
         model_id=model_id,
-        temperature=settings.model_temperature,
+        **({"additional_request_fields": _opus_additional_request_fields()} if is_opus else {"temperature": settings.model_temperature}),
         boto_client_config=_bedrock_client_config(),
     )
 

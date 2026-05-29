@@ -51,6 +51,24 @@ def _supports_tool_cache(model_identifier: str) -> bool:
     return model_identifier in ("sonnet-4-6", "haiku-4-5", "opus")
 
 
+def _is_opus(model_identifier: str) -> bool:
+    """Return True if the model is Claude Opus (4.7+), which requires adaptive thinking."""
+    return model_identifier == "opus"
+
+
+def _opus_additional_request_fields() -> dict:
+    """Return additional_request_fields for Claude Opus 4.7+ adaptive thinking.
+
+    Uses settings.opus_thinking_effort for the effort level.
+    temperature must NOT be set when using adaptive thinking (Opus 4.7+).
+    """
+    effort = settings.opus_thinking_effort or "high"
+    return {
+        "thinking": {"type": "adaptive"},
+        "output_config": {"effort": effort},
+    }
+
+
 def _build_skills_plugin() -> AgentSkills | None:
     """Return an AgentSkills plugin if skills_dir is configured, else None.
 
@@ -196,11 +214,12 @@ class StrandsAgent:
         # The "executing" model is always the primary bedrock_model_id.
         _exec_cache = _supports_prompt_cache(settings.model_identifier)
         _exec_tool_cache = _supports_tool_cache(settings.model_identifier)
+        _exec_opus = _is_opus(settings.model_identifier)
         self.model = BedrockModel(
             **({"cache_prompt": "default"} if _exec_cache else {}),
             **({"cache_tools": "default"} if _exec_tool_cache else {}),
             model_id=settings.bedrock_model_id,
-            temperature=settings.model_temperature,
+            **({"additional_request_fields": _opus_additional_request_fields()} if _exec_opus else {"temperature": settings.model_temperature}),
             boto_client_config=_bedrock_client_config(),
         )
 

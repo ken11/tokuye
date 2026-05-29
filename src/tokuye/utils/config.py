@@ -79,12 +79,18 @@ class Settings(BaseSettings):
     # --- Epic mode (v3) --------------------------------------------------
     epic_mode: bool = False
     bedrock_epic_manager_model_id: str = ""  # EpicManagerAgent; falls back to bedrock_model_id
+    epic_manager_model_identifier: str = ""  # EpicManagerAgent identifier; falls back to model_identifier
     bedrock_impl_model_id: str = ""        # Developer node; falls back to bedrock_model_id
     impl_model_identifier: str = ""
     bedrock_classifier_model_id: str = ""  # State Classifier node; falls back to bedrock_model_id
     classifier_model_identifier: str = ""
     bedrock_pr_model_id: str = ""          # PR Creator node; falls back to bedrock_model_id
     pr_model_identifier: str = ""
+
+    # --- Opus thinking ---------------------------------------------------
+    # effort level for Claude Opus 4.7+ adaptive thinking.
+    # Valid values: "low", "medium", "high", "xhigh", "max"
+    opus_thinking_effort: str = "high"
 
     model_temperature: float = 0.2
     pr_branch_prefix: str = "tokuye/"
@@ -186,10 +192,12 @@ def _apply_yaml_to_settings(
         "state_machine_mode",
         "epic_mode",
         "bedrock_epic_manager_model_id",
+        "epic_manager_model_identifier",
         "bedrock_impl_model_id",
         "bedrock_repo_description_model_id",
         "bedrock_classifier_model_id",
         "bedrock_pr_model_id",
+        "opus_thinking_effort",
         "model_temperature",
         "pr_branch_prefix",
         "strands_session_dir",
