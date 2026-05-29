@@ -26,6 +26,7 @@ import os
 from strands import Agent
 from strands.agent.conversation_manager import SummarizingConversationManager
 from strands.models import BedrockModel
+from strands.models.bedrock import CacheConfig
 from strands.session.file_session_manager import FileSessionManager
 from strands.tools.executors import SequentialToolExecutor
 from strands.vended_plugins.skills import AgentSkills
@@ -34,7 +35,6 @@ from tokuye.agent.strands_agent import (
     _build_skills_plugin,
     _is_opus,
     _opus_additional_request_fields,
-    _supports_prompt_cache,
     _supports_tool_cache,
 )
 from tokuye.mcp_manager import MCPClientManager
@@ -95,11 +95,10 @@ class EpicManagerAgent:
         # Model — use bedrock_epic_manager_model_id if set, else fall back to bedrock_model_id
         manager_model_id = settings.bedrock_epic_manager_model_id or settings.bedrock_model_id
         manager_identifier = settings.epic_manager_model_identifier or settings.model_identifier
-        _exec_cache = _supports_prompt_cache(manager_identifier)
         _exec_tool_cache = _supports_tool_cache(manager_identifier)
         _exec_opus = _is_opus(manager_identifier)
         self.model = BedrockModel(
-            **({"cache_prompt": "default"} if _exec_cache else {}),
+            cache_config=CacheConfig(strategy="auto"),
             **({"cache_tools": "default"} if _exec_tool_cache else {}),
             model_id=manager_model_id,
             **({"additional_request_fields": _opus_additional_request_fields()} if _exec_opus else {"temperature": settings.model_temperature}),

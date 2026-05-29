@@ -7,6 +7,7 @@ from strands import Agent
 from strands.agent import AgentResult
 from strands.agent.conversation_manager import SummarizingConversationManager
 from strands.models import BedrockModel
+from strands.models.bedrock import CacheConfig
 from strands.session.file_session_manager import FileSessionManager
 from strands.tools.executors import SequentialToolExecutor
 from strands.vended_plugins.skills import AgentSkills
@@ -29,16 +30,6 @@ def _bedrock_client_config():
     """Return a botocore Config with an extended read timeout for Bedrock calls."""
     from botocore.config import Config as BotocoreConfig
     return BotocoreConfig(read_timeout=_BEDROCK_READ_TIMEOUT)
-
-
-def _supports_prompt_cache(model_identifier: str) -> bool:
-    """Return True if the model supports Bedrock prompt caching.
-
-    Determined by model_identifier (the normalised internal name), not the
-    raw model_id / ARN.  Claude models and Amazon Nova Pro support prompt
-    caching; Mistral Devstral does not.
-    """
-    return model_identifier in ("sonnet-4-6", "haiku-4-5", "opus", "nova-pro")
 
 
 def _supports_tool_cache(model_identifier: str) -> bool:
@@ -212,11 +203,10 @@ class StrandsAgent:
 
         # --- Model setup -------------------------------------------------
         # The "executing" model is always the primary bedrock_model_id.
-        _exec_cache = _supports_prompt_cache(settings.model_identifier)
         _exec_tool_cache = _supports_tool_cache(settings.model_identifier)
         _exec_opus = _is_opus(settings.model_identifier)
         self.model = BedrockModel(
-            **({"cache_prompt": "default"} if _exec_cache else {}),
+            cache_config=CacheConfig(strategy="auto"),
             **({"cache_tools": "default"} if _exec_tool_cache else {}),
             model_id=settings.bedrock_model_id,
             **({"additional_request_fields": _opus_additional_request_fields()} if _exec_opus else {"temperature": settings.model_temperature}),
@@ -296,9 +286,8 @@ class StrandsAgent:
             classifier_identifier = (
                 settings.classifier_model_identifier or settings.model_identifier
             )
-            _cls_cache = _supports_prompt_cache(classifier_identifier)
             classifier_model = BedrockModel(
-                **({"cache_prompt": "default"} if _cls_cache else {}),
+                cache_config=CacheConfig(strategy="auto"),
                 model_id=classifier_model_id,
                 temperature=0.0,  # deterministic classification
             )

@@ -34,6 +34,7 @@ from strands import Agent
 from strands.agent.conversation_manager import SummarizingConversationManager
 from strands.handlers.callback_handler import null_callback_handler
 from strands.models import BedrockModel
+from strands.models.bedrock import CacheConfig
 from strands.session.file_session_manager import FileSessionManager
 from strands.tools.executors import SequentialToolExecutor
 
@@ -41,7 +42,6 @@ from tokuye.agent.strands_agent import (
     _build_skills_plugin_for_repo,
     _is_opus,
     _opus_additional_request_fields,
-    _supports_prompt_cache,
     _supports_tool_cache,
 )
 from tokuye.prompts.prompt_loader import load_prompt, load_prompt_if_exists
@@ -106,11 +106,10 @@ class EpicWorkerAgent:
             self.summary_prompt = load_prompt_if_exists("summary_prompt_en.md")
 
         # Model — use the primary execution model
-        _exec_cache = _supports_prompt_cache(settings.model_identifier)
         _exec_tool_cache = _supports_tool_cache(settings.model_identifier)
         _exec_opus = _is_opus(settings.model_identifier)
         self.model = BedrockModel(
-            **({"cache_prompt": "default"} if _exec_cache else {}),
+            cache_config=CacheConfig(strategy="auto"),
             **({"cache_tools": "default"} if _exec_tool_cache else {}),
             model_id=settings.bedrock_model_id,
             **({"additional_request_fields": _opus_additional_request_fields()} if _exec_opus else {"temperature": settings.model_temperature}),

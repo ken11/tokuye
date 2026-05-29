@@ -33,6 +33,7 @@ import os
 from strands import Agent
 from strands.agent.conversation_manager import SummarizingConversationManager
 from strands.models import BedrockModel
+from strands.models.bedrock import CacheConfig
 from strands.session.file_session_manager import FileSessionManager
 from strands.tools.executors import SequentialToolExecutor
 
@@ -68,12 +69,12 @@ def _make_bedrock_model(model_id: str, model_identifier: str) -> BedrockModel:
     from tokuye.agent.strands_agent import (
         _is_opus,
         _opus_additional_request_fields,
+        _supports_tool_cache,
     )
-    cache_prompt = model_identifier in ("sonnet-4-6", "haiku-4-5", "opus", "nova-pro")
-    cache_tools = model_identifier in ("sonnet-4-6", "haiku-4-5", "opus")
+    cache_tools = _supports_tool_cache(model_identifier)
     is_opus = _is_opus(model_identifier)
     return BedrockModel(
-        **({"cache_prompt": "default"} if cache_prompt else {}),
+        cache_config=CacheConfig(strategy="auto"),
         **({"cache_tools": "default"} if cache_tools else {}),
         model_id=model_id,
         **({"additional_request_fields": _opus_additional_request_fields()} if is_opus else {"temperature": settings.model_temperature}),
