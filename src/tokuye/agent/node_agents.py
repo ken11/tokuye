@@ -74,7 +74,7 @@ def _make_bedrock_model(model_id: str, model_identifier: str) -> BedrockModel:
     cache_tools = _supports_tool_cache(model_identifier)
     is_opus = _is_opus(model_identifier)
     return BedrockModel(
-        cache_config=CacheConfig(strategy="auto"),
+        cache_config=CacheConfig(strategy="anthropic"),
         **({"cache_tools": "default"} if cache_tools else {}),
         model_id=model_id,
         **({"additional_request_fields": _opus_additional_request_fields()} if is_opus else {"temperature": settings.model_temperature}),

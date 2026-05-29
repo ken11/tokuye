@@ -206,7 +206,7 @@ class StrandsAgent:
         _exec_tool_cache = _supports_tool_cache(settings.model_identifier)
         _exec_opus = _is_opus(settings.model_identifier)
         self.model = BedrockModel(
-            cache_config=CacheConfig(strategy="auto"),
+            cache_config=CacheConfig(strategy="anthropic"),
             **({"cache_tools": "default"} if _exec_tool_cache else {}),
             model_id=settings.bedrock_model_id,
             **({"additional_request_fields": _opus_additional_request_fields()} if _exec_opus else {"temperature": settings.model_temperature}),
@@ -287,7 +287,7 @@ class StrandsAgent:
                 settings.classifier_model_identifier or settings.model_identifier
             )
             classifier_model = BedrockModel(
-                cache_config=CacheConfig(strategy="auto"),
+                cache_config=CacheConfig(strategy="anthropic"),
                 model_id=classifier_model_id,
                 temperature=0.0,  # deterministic classification
             )

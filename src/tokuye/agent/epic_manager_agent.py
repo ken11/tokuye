@@ -98,7 +98,7 @@ class EpicManagerAgent:
         _exec_tool_cache = _supports_tool_cache(manager_identifier)
         _exec_opus = _is_opus(manager_identifier)
         self.model = BedrockModel(
-            cache_config=CacheConfig(strategy="auto"),
+            cache_config=CacheConfig(strategy="anthropic"),
             **({"cache_tools": "default"} if _exec_tool_cache else {}),
             model_id=manager_model_id,
             **({"additional_request_fields": _opus_additional_request_fields()} if _exec_opus else {"temperature": settings.model_temperature}),
