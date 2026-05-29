@@ -8,12 +8,15 @@ Exports:
 
 from tokuye.tools.strands_tools.epic_tools.epic_dir_tools import (
     create_epic_dir,
+    insert_after_exact_epic,
+    insert_before_exact_epic,
     list_directory_epic,
     list_epic_docs,
     list_project_docs,
     read_epic_file,
     read_lines_epic,
     read_project_doc,
+    replace_exact_epic,
     save_epic_decisions,
     save_epic_plan,
     save_epic_tasks,
@@ -51,6 +54,10 @@ epic_manager_tools = [
     save_epic_decisions,
     write_epic_doc,
     list_epic_docs,
+    # Partial-edit tools for Epic management directory
+    replace_exact_epic,
+    insert_after_exact_epic,
+    insert_before_exact_epic,
     # Per-repo analysis (epic-safe versions)
     repo_summarize_epic,
     repo_description_epic,

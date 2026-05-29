@@ -305,8 +305,11 @@ def read_epic_file(epic_id: str, filename: str) -> str:
     description=(
         "Write a supplementary document to the docs/ subdirectory of an Epic. "
         "Creates or overwrites docs/<filename>. "
-        "Use this when the user asks to create reference material, specs, "
-        "meeting notes, or any auxiliary document for the Epic. "
+        "Use this ONLY when creating a new file or when a full overwrite is "
+        "explicitly required. "
+        "For partial edits to an existing document (e.g. updating a section), "
+        "use replace_exact_epic / insert_after_exact_epic / insert_before_exact_epic "
+        "instead — they are safer and avoid accidental data loss. "
         "filename must be a simple name (e.g. 'api-spec.md'); "
         "subdirectories inside docs/ are not allowed."
     ),
@@ -591,8 +594,11 @@ def read_project_doc(filename: str) -> str:
         "Write a document to the project-level shared docs directory "
         "(<project_root>/docs/<filename>). "
         "Creates or overwrites docs/<filename>. "
-        "Use this when the user asks to create or update project-wide reference "
-        "material such as architecture notes, API specs, or coding conventions. "
+        "Use this ONLY when creating a new file or when a full overwrite is "
+        "explicitly required. "
+        "For partial edits to an existing document (e.g. updating a section), "
+        "use replace_exact_epic / insert_after_exact_epic / insert_before_exact_epic "
+        "instead — they are safer and avoid accidental data loss. "
         "filename must be a simple name (e.g. 'architecture.md'); "
         "subdirectories are not allowed."
     ),
@@ -628,4 +634,112 @@ def write_project_doc(filename: str, content: str) -> str:
     target.write_text(content, encoding="utf-8")
     logger.info("Wrote project doc: %s", target)
     return f"Document saved to: {target}"
+
+
+# ---------------------------------------------------------------------------
+# Partial-edit tools for Epic management directory (EpicManagerAgent)
+# ---------------------------------------------------------------------------
+# These tools allow safe, surgical edits to any file inside the Epic
+# management directory (project_root) without overwriting the whole file.
+#
+# Typical workflow:
+#   1. read_lines_epic  — copy the target block verbatim
+#   2. replace_exact_epic / insert_after_exact_epic / insert_before_exact_epic
+#
+# Use write_epic_doc / write_project_doc only when creating a new file or
+# when a full overwrite is explicitly required.
+# ---------------------------------------------------------------------------
+
+
+@tool(
+    name="replace_exact_epic",
+    description=(
+        "Replace an exact block of text in a file inside the Epic management "
+        "directory (project_root). "
+        "`old_text` must match exactly one location in the file — "
+        "fails with 'old_text not found' (0 matches) or "
+        "'old_text matched multiple locations (N)' (N > 1 matches). "
+        "Always use read_lines_epic to copy the target block verbatim before "
+        "calling this tool. "
+        "Prefer this over write_epic_doc / write_project_doc for partial edits "
+        "to existing documents. "
+        "Only UTF-8 encoded files are supported."
+    ),
+)
+def replace_exact_epic(file_path: str, old_text: str, new_text: str) -> str:
+    """Replace an exact block of text in a file inside the Epic management directory.
+
+    Args:
+        file_path: Path relative to the Epic management project_root.
+        old_text: Exact text to find (must match exactly one location).
+        new_text: Replacement text.
+
+    Returns:
+        Success message, or an error message.
+    """
+    from tokuye.tools.strands_tools.text_edit_tools import replace_exact_for
+
+    return replace_exact_for(_epic_mgmt_root(), file_path, old_text, new_text)
+
+
+@tool(
+    name="insert_after_exact_epic",
+    description=(
+        "Insert new text immediately after an exact anchor block in a file "
+        "inside the Epic management directory (project_root). "
+        "`anchor_text` must match exactly one location — "
+        "fails with 'anchor_text not found' (0 matches) or "
+        "'anchor_text matched multiple locations (N)' (N > 1 matches). "
+        "Always use read_lines_epic to copy the anchor verbatim before "
+        "calling this tool. "
+        "Prefer this over write_epic_doc / write_project_doc for partial edits "
+        "to existing documents. "
+        "Only UTF-8 encoded files are supported."
+    ),
+)
+def insert_after_exact_epic(file_path: str, anchor_text: str, new_text: str) -> str:
+    """Insert text immediately after an exact anchor block.
+
+    Args:
+        file_path: Path relative to the Epic management project_root.
+        anchor_text: Exact text to locate (must match exactly one location).
+        new_text: Text to insert after the anchor.
+
+    Returns:
+        Success message, or an error message.
+    """
+    from tokuye.tools.strands_tools.text_edit_tools import insert_after_exact_for
+
+    return insert_after_exact_for(_epic_mgmt_root(), file_path, anchor_text, new_text)
+
+
+@tool(
+    name="insert_before_exact_epic",
+    description=(
+        "Insert new text immediately before an exact anchor block in a file "
+        "inside the Epic management directory (project_root). "
+        "`anchor_text` must match exactly one location — "
+        "fails with 'anchor_text not found' (0 matches) or "
+        "'anchor_text matched multiple locations (N)' (N > 1 matches). "
+        "Always use read_lines_epic to copy the anchor verbatim before "
+        "calling this tool. "
+        "Prefer this over write_epic_doc / write_project_doc for partial edits "
+        "to existing documents. "
+        "Only UTF-8 encoded files are supported."
+    ),
+)
+def insert_before_exact_epic(file_path: str, anchor_text: str, new_text: str) -> str:
+    """Insert text immediately before an exact anchor block.
+
+    Args:
+        file_path: Path relative to the Epic management project_root.
+        anchor_text: Exact text to locate (must match exactly one location).
+        new_text: Text to insert before the anchor.
+
+    Returns:
+        Success message, or an error message.
+    """
+    from tokuye.tools.strands_tools.text_edit_tools import insert_before_exact_for
+
+    return insert_before_exact_for(_epic_mgmt_root(), file_path, anchor_text, new_text)
 
