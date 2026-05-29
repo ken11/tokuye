@@ -17,6 +17,49 @@ def signal_handler(sig, frame):
     sys.exit(0)
 
 
+def _resolve_identifier(model_id: str) -> str:
+    """Resolve a bedrock model_id (or inference profile ARN) to a normalised identifier string."""
+    source = _resolve_source_model_id(model_id)
+    if "claude-sonnet-4-6" in source:
+        return "sonnet-4-6"
+    if "claude-haiku-4-5-" in source:
+        return "haiku-4-5"
+    if "claude-opus-4-8" in source:
+        return "opus"
+    if "devstral-2" in source:
+        return "devstral-2"
+    if "nova-pro-v1" in source:
+        return "nova-pro"
+    return ""
+
+
+def _resolve_all_model_identifiers() -> None:
+    """Resolve all per-role model identifiers from their bedrock_*_model_id settings.
+
+    Must be called after load_yaml_config() and after settings.model_identifier
+    has been set from the primary bedrock_model_id.
+    """
+    if settings.bedrock_impl_model_id:
+        settings.impl_model_identifier = _resolve_identifier(settings.bedrock_impl_model_id)
+    else:
+        settings.impl_model_identifier = settings.model_identifier
+
+    if settings.bedrock_classifier_model_id:
+        settings.classifier_model_identifier = _resolve_identifier(settings.bedrock_classifier_model_id)
+    else:
+        settings.classifier_model_identifier = settings.model_identifier
+
+    if settings.bedrock_pr_model_id:
+        settings.pr_model_identifier = _resolve_identifier(settings.bedrock_pr_model_id)
+    else:
+        settings.pr_model_identifier = settings.model_identifier
+
+    if settings.bedrock_epic_manager_model_id:
+        settings.epic_manager_model_identifier = _resolve_identifier(settings.bedrock_epic_manager_model_id)
+    else:
+        settings.epic_manager_model_identifier = settings.model_identifier
+
+
 def main(
     project_root: Optional[Path] = typer.Option(
         None, "--project-root", "-p", help="Root directory of the project"
@@ -74,39 +117,7 @@ def main(
     if "nova-pro-v1" in _exec_source:
         settings.model_identifier = "nova-pro"
 
-    def _resolve_identifier(model_id: str) -> str:
-        source = _resolve_source_model_id(model_id)
-        if "claude-sonnet-4-6" in source:
-            return "sonnet-4-6"
-        if "claude-haiku-4-5-" in source:
-            return "haiku-4-5"
-        if "claude-opus-4-8" in source:
-            return "opus"
-        if "devstral-2" in source:
-            return "devstral-2"
-        if "nova-pro-v1" in source:
-            return "nova-pro"
-        return ""
-
-    if settings.bedrock_impl_model_id:
-        settings.impl_model_identifier = _resolve_identifier(settings.bedrock_impl_model_id)
-    else:
-        settings.impl_model_identifier = settings.model_identifier
-
-    if settings.bedrock_classifier_model_id:
-        settings.classifier_model_identifier = _resolve_identifier(settings.bedrock_classifier_model_id)
-    else:
-        settings.classifier_model_identifier = settings.model_identifier
-
-    if settings.bedrock_pr_model_id:
-        settings.pr_model_identifier = _resolve_identifier(settings.bedrock_pr_model_id)
-    else:
-        settings.pr_model_identifier = settings.model_identifier
-
-    if settings.bedrock_epic_manager_model_id:
-        settings.epic_manager_model_identifier = _resolve_identifier(settings.bedrock_epic_manager_model_id)
-    else:
-        settings.epic_manager_model_identifier = settings.model_identifier
+    _resolve_all_model_identifiers()
 
     validate_settings()
     token_tracker.set_cost_table()
@@ -254,6 +265,8 @@ def _api_command(
         settings.model_identifier = "devstral-2"
     if "nova-pro-v1" in _exec_source:
         settings.model_identifier = "nova-pro"
+
+    _resolve_all_model_identifiers()
 
     validate_settings()
     token_tracker.set_cost_table()
