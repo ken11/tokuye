@@ -133,16 +133,16 @@ class EpicWorkerAgent:
         else:
             session_id = f"epic-{epic_id}-{task_id}"
 
-        # fresh_session=True: discard any existing session file so the Worker
-        # starts with a clean slate (use when retrying a failed task).
+        # fresh_session=True: force a brand-new session by appending a random
+        # hex suffix.  FileSessionManager stores data under
+        # <storage_dir>/session_<session_id>/, so a different session_id
+        # naturally creates a clean directory without touching existing data.
         if fresh_session:
-            session_file = os.path.join(session_dir, f"{session_id}.json")
-            if os.path.exists(session_file):
-                os.remove(session_file)
-                logger.info(
-                    "EpicWorkerAgent: cleared session file for fresh start (%s)",
-                    session_file,
-                )
+            session_id = f"{session_id}-{os.urandom(4).hex()}"
+            logger.info(
+                "EpicWorkerAgent: fresh_session requested — using new session_id %s",
+                session_id,
+            )
 
         self.session_manager = FileSessionManager(
             session_id=session_id, storage_dir=session_dir
