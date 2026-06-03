@@ -27,6 +27,7 @@ class CommandEntry:
     fixed_args: List[str] = field(default_factory=list)
     allow_extra_args: bool = True
     timeout: Optional[int] = None  # None → fall back to CommandPolicy.default_timeout
+    approval_required: bool = True  # False → skip user approval prompt
 
 
 @dataclass
@@ -243,6 +244,7 @@ def _parse_command_policy(raw: dict) -> "CommandPolicy":
                 fixed_args=list(entry.get("fixed_args", [])),
                 allow_extra_args=bool(entry.get("allow_extra_args", True)),
                 timeout=int(entry["timeout"]) if "timeout" in entry else None,
+                approval_required=bool(entry.get("approval_required", True)),
             ))
         except Exception as e:
             logger.warning("Invalid command_policy entry %r: %s", entry, e)

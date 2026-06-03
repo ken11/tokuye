@@ -195,6 +195,7 @@ def _list_project_commands_impl(repo_root: Optional[Path] = None) -> dict:
             "description": cmd.description,
             "resolved_prefix": [cmd.command, *cmd.fixed_args],
             "allow_extra_args": cmd.allow_extra_args,
+            "approval_required": cmd.approval_required,
             "timeout": effective_timeout,
             "usage": {
                 "name": cmd.name,
@@ -222,6 +223,7 @@ def list_project_commands() -> dict:
           - description: human-readable description
           - resolved_prefix: the argv prefix that will be executed
           - allow_extra_args: whether extra_args are accepted
+          - approval_required: whether user approval is required before execution
           - timeout: effective timeout in seconds
           - usage: example invocation dict
     """
@@ -289,12 +291,13 @@ async def _run_project_command_impl(
     cwd = repo_root.resolve()
 
     # --- Approval flow ---------------------------------------------------
-    approved = await _request_approval(argv, cwd)
-    if not approved:
-        return {
-            "status": "cancelled",
-            "message": "Command execution was rejected by the user.",
-        }
+    if cmd_entry.approval_required:
+        approved = await _request_approval(argv, cwd)
+        if not approved:
+            return {
+                "status": "cancelled",
+                "message": "Command execution was rejected by the user.",
+            }
 
     # --- Execute ---------------------------------------------------------
     result = await _run_subprocess(argv, cwd, effective_timeout, policy.max_output_chars)
